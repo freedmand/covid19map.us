@@ -141,7 +141,7 @@ with open("covid_confirmed_usafacts.csv", "r", encoding="latin-1") as confirmed_
         deaths_reader = csv.reader(deaths_file)
 
         skip_header = True
-        for confirmed_row, deaths_row in zip(confirmed_reader, deaths_reader):
+        for confirmed_row in confirmed_reader:
             if skip_header:
                 # First day in the dataset
                 # Subsequent columns are subsequent days
@@ -154,10 +154,33 @@ with open("covid_confirmed_usafacts.csv", "r", encoding="latin-1") as confirmed_
             state = confirmed_row[2]
             state_fips = int(confirmed_row[3])
             confirmed_counts = confirmed_row[4:]
-            deaths_counts = deaths_row[4:]
 
-            states[state].append([county, county_fips, confirmed_counts, deaths_counts])
+            states[state].append([county, county_fips, confirmed_counts])
             states_by_fips[state] = state_fips
+
+        skip_header = True
+        for deaths_row in deaths_reader:
+            if skip_header:
+                skip_header = False
+                continue
+
+            state, county_fips = deaths_row[2], int(deaths_row[0])
+            deaths_counts = deaths_row[4:]
+            found = False
+            for county in states[state]:
+                if county[1] == county_fips and len(county) == 3:
+                    county.append(deaths_counts)
+                    found = True
+            if not found:
+                if not all(count == "0" for count in deaths_counts):
+                    print(county_fips)
+                    raise Exception("non-matching death count")
+
+        # Fill in unfound death data
+        for state in states:
+            for county in states[state]:
+                if len(county) == 3:
+                    county.append(["0"] * len(county[2]))
 
 
 def expand_runs(data):
@@ -232,6 +255,9 @@ with open("../public/output.bin", "wb") as f:
         counties = sorted(counties, key=lambda x: x[0])
         out_str(">" + state + "-" + shortcodes[state])
         out_poly(states_poly[states_by_fips[state]])
+        for county in counties:
+            if len(county) != 4:
+                print(county)
         for county, county_fips, confirmed_data, deaths_data in counties:
             if county.endswith(SUFFIX):
                 county = county[: -len(SUFFIX)]

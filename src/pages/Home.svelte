@@ -1,170 +1,212 @@
 <script>
-  import Header from "@/components/Header";
-  import { smoothly } from "@/util/smoothly";
-  import { processCovidData } from "@/processing/processCovidData";
+  import { Svue } from "svue";
+  import { Deck } from "@deck.gl/core";
+  import { ScatterplotLayer, PolygonLayer } from "@deck.gl/layers";
+  import { HeatmapLayer } from "@deck.gl/aggregation-layers";
+  import { COORDINATE_SYSTEM, OrthographicView } from "@deck.gl/core";
+  import {
+    downloadData,
+    DESIRED_MAX_CIRCLE_SIZE
+  } from "@/processing/processCovidData";
+  import { onMount, tick } from "svelte";
+  import { cubicOut } from "svelte/easing";
 
-  import { onMount } from "svelte";
-
-  // Element bindings
-  let canvasElem;
-
-  // Pixi application
-  let app = null;
-
-  // Covid Map
   let data = null;
+  let loading = true;
+
   let caseIndex = 0;
 
-  function downloadData() {
-    return new Promise(resolve => {
-      const req = new XMLHttpRequest();
+  const TRANSITION = {
+    type: "spring"
+  };
 
-      req.onload = e => {
-        resolve(processCovidData(req.response));
-      };
+  class Data extends Svue {
+    constructor(data) {
+      super({
+        data() {
+          return { ...data, deck: null, caseIndex: 0 };
+        },
+        watch: {
+          layers() {
+            if (this.deck != null) {
+              console.log("animating");
+              this.deck.setProps({ layers: this.layers });
+            }
+          }
+        },
+        computed: {
+          minX(bounds) {
+            return bounds[0];
+          },
+          maxX(bounds) {
+            return bounds[3];
+          },
+          minY(bounds) {
+            return bounds[1];
+          },
+          maxY(bounds) {
+            return bounds[2];
+          },
+          width(minX, maxX) {
+            return maxX - minX;
+          },
+          height(minY, maxY) {
+            return maxY - minY;
+          },
+          midX(minX, width) {
+            return minX + width / 2;
+          },
+          midY(minY, height) {
+            return minY + height / 2;
+          },
+          polygonCounties(counties) {
+            return counties.filter(county => county.polygon.centroid != null);
+          },
+          countyRegions(polygonCounties, caseIndex) {
+            return polygonCounties
+              .map(county =>
+                county.polygon.centroid.multipoly.map(poly => ({
+                  poly,
+                  value: county.cases[caseIndex]
+                }))
+              )
+              .flat(1);
+          },
+          countyCircles(polygonCounties, caseIndex) {
+            return polygonCounties.map(county => ({
+              position: [county.polygon.centroid.x, county.polygon.centroid.y],
+              radius: Math.sqrt(county.cases[caseIndex])
+            }));
+          },
+          polygonStates(states) {
+            return states.filter(state => state.polygon.centroid != null);
+          },
+          stateRegions(polygonStates) {
+            return polygonStates
+              .map(state => state.polygon.centroid.multipoly)
+              .flat(1);
+          },
 
-      req.open("GET", "/output.bin");
-      req.responseType = "arraybuffer";
-      req.send();
-    });
+          // Layers
+          countyLayer(countyRegions, maxCountyCases) {
+            return new PolygonLayer({
+              id: "county-regions",
+              data: countyRegions,
+              getPolygon: d => d.poly,
+              getLineColor: d => {
+                if (d.value == 0) return [255, 255, 255, 0];
+                let shade = Math.max(
+                  Math.pow(d.value / maxCountyCases, 0.3) * 0.5,
+                  0.08
+                );
+                shade = 255 - shade * 255;
+                shade = shade == 255 ? 255 : Math.min(shade * 0.8, 255);
+                return [shade, shade, shade, shade];
+              },
+              getFillColor: d => {
+                if (d.value == 0) return [255, 255, 255, 0];
+                let shade = Math.max(
+                  Math.pow(d.value / maxCountyCases, 0.3) * 0.5,
+                  0.08
+                );
+                shade = 255 - shade * 255;
+                return [255, shade, shade];
+              },
+              lineWidthMinPixels: 0.5,
+              lineWidthMaxPixels: 0.5,
+              extruded: false,
+              parameters: {
+                depthTest: false
+              },
+              transitions: {
+                getLineColor: TRANSITION,
+                getFillColor: TRANSITION
+              }
+            });
+          },
+          stateLayer(stateRegions) {
+            return new PolygonLayer({
+              id: "state-regions",
+              data: stateRegions,
+              filled: false,
+              getPolygon: d => d,
+              getLineColor: [128, 128, 128],
+              lineWidthMinPixels: 0.5,
+              lineWidthMaxPixels: 0.5,
+              parameters: {
+                depthTest: false
+              }
+            });
+          },
+          circleLayer(countyCircles) {
+            return new ScatterplotLayer({
+              id: "county-circles",
+              data: countyCircles,
+              radiusScale: 0.5,
+              stroked: true,
+              getFillColor: [255, 0, 0, 51],
+              getLineColor: [255, 0, 0, 204],
+              lineWidthMinPixels: 0.5,
+              lineWidthMaxPixels: 0.5,
+              getRadius: d => (d.radius < 0.01 ? 0 : d.radius),
+              parameters: {
+                depthTest: false
+              },
+              transitions: {
+                getRadius: TRANSITION
+              }
+            });
+          },
+          layers(countyLayer, stateLayer, circleLayer) {
+            return [countyLayer, stateLayer, circleLayer];
+          }
+        }
+      });
+    }
   }
 
   onMount(async () => {
-    app = new PIXI.Application({
-      antialias: true,
-      resolution: window.devicePixelRatio,
-      autoResize: true,
-      autoStart: false
-    });
-    app.renderer.resize(canvasElem.offsetWidth, canvasElem.offsetHeight);
-    canvasElem.appendChild(app.view);
-    data = await downloadData();
-    resizeData();
-    caseIndex = data.numDays - 1;
-    draw(data);
+    data = new Data(await downloadData());
+    data.deck = initDeck();
+    loading = false;
   });
 
-  const PADDING_Y = 20;
-  const PADDING_X = 20;
-  function resizeData() {
-    if (data == null || canvasElem == null) return;
-    const width = canvasElem.offsetWidth - PADDING_X * 2;
-    const height = canvasElem.offsetHeight - PADDING_Y * 2;
-    const bounds = data.bounds;
-    const boundsWidth = bounds[2] - bounds[0];
-    const boundsHeight = bounds[3] - bounds[1];
-    const scale = Math.min(width / boundsWidth, height / boundsHeight);
-    const actualWidth = boundsWidth * scale;
-    const actualHeight = boundsHeight * scale;
-    const paddingLeft = (width - boundsWidth * scale) / 2;
-    const paddingTop = (height - boundsHeight * scale) / 2;
-
-    const normalizeX = x =>
-      ((x - bounds[0]) / boundsWidth) * actualWidth + paddingLeft + PADDING_X;
-    const normalizeY = y =>
-      ((y - bounds[1]) / boundsHeight) * actualHeight + paddingTop + PADDING_Y;
-
-    const normalizePlace = place => {
-      if (place.polygon.centroid == null) return;
-      const multipoly = place.polygon.centroid.multipoly;
-      place.polygon.normalized = multipoly.map(poly =>
-        poly.map(coords =>
-          coords.map(([x, y]) => [normalizeX(x), normalizeY(y)]).flat()
-        )
-      );
-    };
-
-    for (let i = 0; i < data.states.length; i++) {
-      normalizePlace(data.states[i]);
-    }
-
-    for (let i = 0; i < data.counties.length; i++) {
-      normalizePlace(data.counties[i]);
-    }
-  }
-
-  function draw(data) {
-    console.log("drawing");
-    const graphics = new PIXI.Graphics();
-
-    const drawPoly = (multipoly, style) => {
-      if (multipoly == null) return;
-      multipoly.forEach(poly => {
-        if (style.fill) {
-          graphics.beginFill(...style.fill);
-        } else {
-        }
-        if (style.stroke) {
-          graphics.lineStyle(...style.stroke);
-        } else {
-          graphics.lineStyle(0);
-        }
-        poly.forEach((subpoly, i) => {
-          if (i == 1) graphics.beginHole();
-          graphics.drawPolygon(subpoly);
-        });
-        if (poly.length > 1) graphics.endHole();
-        if (style.fill) {
-          graphics.endFill();
-        }
-        if (style.stroke) {
-          graphics.closePath();
-        }
-      });
-    };
-
-    for (let i = 0; i < data.counties.length; i++) {
-      const county = data.counties[i];
-
-      drawPoly(county.polygon.normalized, {
-        fill: [0x221100, 1],
-        stroke: [1, 0xff0000, 0.2]
-      });
-    }
-
-    for (let i = 0; i < data.states.length; i++) {
-      const state = data.states[i];
-
-      drawPoly(state.polygon.normalized, { stroke: [1, 0xff0000, 1] });
-    }
-
-    app.stage.addChild(graphics);
-  }
-
-  function handleResize() {
-    if (app != null) {
-      smoothly("pixi resize", () => {
-        resizeData();
-        app.renderer.resize(canvasElem.offsetWidth, canvasElem.offsetHeight);
-      });
-    }
+  function initDeck() {
+    return new Deck({
+      container: document.body,
+      coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+      width: "100vw",
+      height: "100vh",
+      views: new OrthographicView({ controller: { keyboard: false } }),
+      initialViewState: {
+        coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+        x: data.midX,
+        y: data.midY
+      },
+      layers: data.layers
+    });
   }
 </script>
 
-<style lang="scss">
-  :global(body, html) {
-    overflow: hidden;
-    margin: 0;
-    padding: 0;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  }
+{#if loading}
+  Loading...
+{:else}
+  <button
+    style="position: fixed;z-index:10"
+    on:click={() => {
+      data.caseIndex = data.numDays - 1;
+      console.log('clicked', data.caseIndex);
+    }}>
+    Change props
+  </button>
+{/if}
 
-  :global(a) {
-    color: inherit;
-    text-decoration: inherit;
-
-    &:hover {
-      opacity: 0.8;
+<svelte:window
+  on:keydown={e => {
+    if (data == null) return;
+    if (e.code == 'ArrowLeft') {
+      data.caseIndex = Math.max(data.caseIndex - 1, 0);
+    } else if (e.code == 'ArrowRight') {
+      data.caseIndex = Math.min(data.caseIndex + 1, data.numDays - 1);
     }
-  }
-
-  .canvas {
-    height: calc(100% - #{$headerHeight});
-  }
-</style>
-
-<Header />
-
-<div class="canvas" bind:this={canvasElem} />
-
-<svelte:window on:resize={handleResize} />
+  }} />

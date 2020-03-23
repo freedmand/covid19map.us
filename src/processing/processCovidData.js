@@ -3,6 +3,20 @@ import polylabel from "@/thirdparty/polylabel";
 export const DESIRED_MAX_CIRCLE_SIZE = 3000;
 let circleScale = 20;
 
+export function downloadData() {
+  return new Promise(resolve => {
+    const req = new XMLHttpRequest();
+
+    req.onload = () => {
+      resolve(processCovidData(req.response));
+    };
+
+    req.open("GET", "/output.bin");
+    req.responseType = "arraybuffer";
+    req.send();
+  });
+}
+
 export function processCovidData(arrayBuffer) {
   let position = 0;
   let currentState = null;
