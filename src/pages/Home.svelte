@@ -67,6 +67,7 @@
               .map(county =>
                 county.polygon.centroid.multipoly.map(poly => ({
                   poly,
+                  county,
                   value: county.cases[caseIndex]
                 }))
               )
@@ -75,7 +76,8 @@
           countyCircles(polygonCounties, caseIndex) {
             return polygonCounties.map(county => ({
               position: [county.polygon.centroid.x, county.polygon.centroid.y],
-              radius: Math.sqrt(county.cases[caseIndex])
+              radius: Math.sqrt(county.cases[caseIndex]),
+              county
             }));
           },
           polygonStates(states) {
@@ -83,11 +85,30 @@
           },
           stateRegions(polygonStates) {
             return polygonStates
-              .map(state => state.polygon.centroid.multipoly)
+              .map(state =>
+                state.polygon.centroid.multipoly.map(poly => ({ poly, state }))
+              )
               .flat(1);
           },
 
           // Layers
+          stateBgLayer(stateRegions) {
+            return new PolygonLayer({
+              id: "state-bg-regions",
+              data: stateRegions,
+              filled: true,
+              stroked: false,
+              getPolygon: d => d.poly,
+              getFillColor: [255, 255, 255, 0],
+              parameters: {
+                depthTest: false
+              },
+
+              // Events
+              pickable: true,
+              onHover: info => console.log("state", info.object, info.x, info.y)
+            });
+          },
           countyLayer(countyRegions, maxCountyCases) {
             return new PolygonLayer({
               id: "county-regions",
@@ -118,6 +139,14 @@
               parameters: {
                 depthTest: false
               },
+
+              // Events
+              pickable: true,
+              onHover: info => {
+                console.log("county", info.object, info.x, info.y);
+              },
+
+              // Animation
               transitions: {
                 getLineColor: TRANSITION,
                 getFillColor: TRANSITION
@@ -129,7 +158,7 @@
               id: "state-regions",
               data: stateRegions,
               filled: false,
-              getPolygon: d => d,
+              getPolygon: d => d.poly,
               getLineColor: [128, 128, 128],
               lineWidthMinPixels: 0.5,
               lineWidthMaxPixels: 0.5,
@@ -154,11 +183,17 @@
               },
               transitions: {
                 getRadius: TRANSITION
+              },
+
+              // Events
+              pickable: true,
+              onHover: info => {
+                console.log("circle", info.object, info.x, info.y);
               }
             });
           },
-          layers(countyLayer, stateLayer, circleLayer) {
-            return [countyLayer, stateLayer, circleLayer];
+          layers(stateBgLayer, countyLayer, stateLayer, circleLayer) {
+            return [stateBgLayer, countyLayer, stateLayer, circleLayer];
           }
         }
       });
@@ -168,6 +203,8 @@
   onMount(async () => {
     data = new Data(await downloadData());
     data.deck = initDeck();
+    await tick();
+    data.caseIndex = data.numDays - 1;
     loading = false;
   });
 
@@ -183,7 +220,10 @@
         x: data.midX,
         y: data.midY
       },
-      layers: data.layers
+      layers: data.layers,
+      onHover(info, event) {
+        console.log("deck hover", info.object);
+      }
     });
   }
 </script>
