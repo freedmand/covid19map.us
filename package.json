@@ -39,8 +39,10 @@
     "test-watch": "jest --watchAll"
   },
   "dependencies": {
+    "d3-scale": "^3.2.1",
     "deck.gl": "^8.1.0",
     "svue": "^1.5.3",
+    "tagmap.js": "^1.1.1",
     "tinyqueue": "^2.0.3"
   }
 }
