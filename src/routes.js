@@ -1,6 +1,5 @@
 import NotFound from "@/pages/NotFound";
 import Home from "@/pages/Home";
-import About from "@/pages/About";
 
 export const routes = [
   NotFound,
@@ -8,10 +7,6 @@ export const routes = [
     home: {
       path: "",
       component: Home
-    },
-    about: {
-      path: "/about",
-      component: About
     },
   }
 ];

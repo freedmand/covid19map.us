@@ -49,7 +49,8 @@
   }
 
   .settings {
-    padding-bottom: 30px;
+    padding-bottom: 100px;
+    line-height: 24px;
   }
 
   h1 {
@@ -170,6 +171,14 @@
       }
     }
   }
+
+  .showdesktop {
+    display: block;
+
+    @media only screen and (max-width: 600px) {
+      display: none;
+    }
+  }
 </style>
 
 <div class="pane">
@@ -270,6 +279,12 @@
         <label>
           Show counties
           <input type="checkbox" bind:checked={data.showCounties} />
+        </label>
+      </div>
+      <div class="showdesktop">
+        <label>
+          Show tooltips
+          <input type="checkbox" bind:checked={data.showTooltips} />
         </label>
       </div>
       <div>

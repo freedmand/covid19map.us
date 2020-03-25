@@ -25,12 +25,17 @@
 <footer>
   {#if data != null}
     <div>
-      Data updated {data.lastUpdated}. Source:
+      Updated {data.lastUpdated}.
+      <a href="https://github.com/freedmand/covid19map" target="_blank">
+        Source Code.
+      </a>
+      Data by
       <a
         href="https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/"
         target="_blank">
-        USAFacts
+        USAFacts.
       </a>
+
     </div>
   {/if}
 </footer>
