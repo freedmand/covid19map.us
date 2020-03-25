@@ -254,12 +254,14 @@ export function processCovidData(arrayBuffer) {
         if (totalDeaths[i] == null) {
           totalDeaths[i] = 0;
         }
+        stateDeaths[currentState][i] += deathCount;
         totalDeaths[i] += deathCount;
       }
       return results;
     }
   };
 
+  const lastUpdated = readLine().trim().replace('Pacific', 'PST').replace(/\/.*$/, '').replace(', at', ' at');
   const firstDateRaw = readLine();
   const dateParts = firstDateRaw.split("/").map(x => parseInt(x));
   const firstDate = new Date(dateParts[2], dateParts[0] - 1, dateParts[1]);
@@ -321,10 +323,12 @@ export function processCovidData(arrayBuffer) {
     totalCases,
     totalDeaths,
     maxTotalCases: Math.max(...totalCases),
+    maxTotalDeaths: Math.max(...totalDeaths),
     maxCountyCases,
     maxCountyDeaths,
     numDays,
     dates,
+    lastUpdated,
     bounds: [globalMinX, globalMinY, globalMaxX, globalMaxY]
   };
 }

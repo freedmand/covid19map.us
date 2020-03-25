@@ -1,2 +1,10 @@
 $headerHeight: 40px;
-$datesHeight: 120px;
+$datesHeight: 200px;
+
+@mixin on-hover {
+  @media (hover: hover) and (pointer: fine) {
+      &:hover {
+          @content;
+      }
+  }
+}

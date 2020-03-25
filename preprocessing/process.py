@@ -151,7 +151,7 @@ with open("covid_confirmed_usafacts.csv", "r", encoding="latin-1") as confirmed_
 
             county_fips = int(confirmed_row[0])
             county = confirmed_row[1]
-            state = confirmed_row[2]
+            state = confirmed_row[2].strip()
             state_fips = int(confirmed_row[3])
             confirmed_counts = confirmed_row[4:]
 
@@ -164,7 +164,7 @@ with open("covid_confirmed_usafacts.csv", "r", encoding="latin-1") as confirmed_
                 skip_header = False
                 continue
 
-            state, county_fips = deaths_row[2], int(deaths_row[0])
+            state, county_fips = deaths_row[2].strip(), int(deaths_row[0])
             deaths_counts = deaths_row[4:]
             found = False
             for county in states[state]:
@@ -182,6 +182,8 @@ with open("covid_confirmed_usafacts.csv", "r", encoding="latin-1") as confirmed_
                 if len(county) == 3:
                     county.append(["0"] * len(county[2]))
 
+with open('last_updated.txt', 'r') as f:
+    last_updated = f.read().strip()
 
 def expand_runs(data):
     result = []
@@ -249,6 +251,7 @@ with open("../public/output.bin", "wb") as f:
         write(p)
         write(b"\n")
 
+    out_str(last_updated)
     out_str(first_date)
     for state in states:
         counties = states[state]

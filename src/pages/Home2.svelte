@@ -356,7 +356,7 @@
     color: inherit;
     text-decoration: inherit;
 
-    &:hover {
+    @include on-hover {
       opacity: 0.8;
     }
   }
@@ -387,7 +387,7 @@
       position: relative;
       user-select: none;
 
-      &:hover {
+      @include on-hover {
         background: rgba(0, 0, 0, 0.05);
         cursor: pointer;
 

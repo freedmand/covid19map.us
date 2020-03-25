@@ -153,7 +153,7 @@
     color: inherit;
     text-decoration: inherit;
 
-    &:hover {
+    @include on-hover {
       opacity: 0.8;
     }
   }

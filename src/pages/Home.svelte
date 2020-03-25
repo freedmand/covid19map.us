@@ -1,10 +1,16 @@
 <script>
   import Header from "@/components/Header";
+  import Footer from "@/components/Footer";
+  import Dates from "@/components/Dates";
   import { Svue } from "svue";
-  import { Deck } from "@deck.gl/core";
   import { ScatterplotLayer, PolygonLayer } from "@deck.gl/layers";
   import { HeatmapLayer } from "@deck.gl/aggregation-layers";
-  import { COORDINATE_SYSTEM, OrthographicView } from "@deck.gl/core";
+  import {
+    Deck,
+    COORDINATE_SYSTEM,
+    OrthographicView,
+    FlyToInterpolator
+  } from "@deck.gl/core";
   import {
     downloadData,
     DESIRED_MAX_CIRCLE_SIZE
@@ -13,55 +19,100 @@
   import { cubicOut } from "svelte/easing";
   import TagmapLayer from "@/thirdparty/tagmap-layer";
 
+  import resetZoomSvg from "@/assets/resetZoom.svg";
+
   let data = null;
   let loading = true;
-  let casesElem = null;
   let canvasElem = null;
+  let panned = false;
 
-  $: {
-    if (data != null && casesElem != null) {
-      casesElem.children[data.caseIndex].scrollIntoView();
-    }
-  }
+  // See https://github.com/uber/deck.gl/issues/4420
+  let hackyCounter = 0;
 
-  let caseIndex = 0;
+  let windowWidth = 0;
+  let windowHeight = 0;
 
   const TRANSITION = {
     type: "spring"
   };
 
+  function resetZoom() {
+    if (data == null) return;
+
+    const screenWidth = windowWidth;
+    const screenHeight = windowHeight;
+    const scale = Math.min(
+      screenWidth / data.width,
+      screenHeight / data.height
+    );
+    const zoom = Math.log2(scale) - 0.1;
+    data.initialZoom = zoom;
+    data.zoom = zoom;
+
+    data.deck._onViewStateChange({
+      hackyForceViewStateChange: true,
+      target: [data.midX, data.midY],
+      zoom
+    });
+    panned = false;
+  }
+
   class Data extends Svue {
     constructor(data) {
       super({
         data() {
-          return { ...data, deck: null, caseIndex: 0 };
+          return {
+            ...data,
+            deck: null,
+            mode: "cases",
+            caseIndex: data.numDays - 1,
+            circleScale: 50,
+            retainCircleSize: true,
+            showTextLabels: true,
+            initialZoom: 0,
+            showCounties: true,
+            zoom: 0
+          };
         },
         watch: {
           layers() {
+            console.log("REDRAWING LAYERS", this.layers);
             if (this.deck != null) {
               console.log("animating");
               this.deck.setProps({ layers: this.layers });
             }
           },
           caseIndex() {
-            console.log("CASE INDEX", casesElem, this.caseIndex);
-            if (casesElem != null) {
-              casesElem.children[this.caseIndex].scrollIntoView();
-            }
+            console.log("CASE INDEX", this.caseIndex);
+          },
+          deck() {
+            console.log("DECK", this.deck);
           }
         },
         computed: {
+          zoomScale(initialZoom, zoom) {
+            const initial = Math.pow(2, initialZoom);
+            const current = Math.pow(2, zoom);
+            return Math.min(initial / current, 1);
+          },
+          effectiveCircleScale(zoomScale, circleScale, retainCircleSize) {
+            if (retainCircleSize) {
+              return circleScale * zoomScale;
+            } else {
+              return circleScale;
+            }
+          },
           minX(bounds) {
             return bounds[0];
           },
           maxX(bounds) {
-            return bounds[3];
+            return bounds[2];
           },
           minY(bounds) {
             return bounds[1];
           },
           maxY(bounds) {
-            return bounds[2];
+            return bounds[3];
           },
           width(minX, maxX) {
             return maxX - minX;
@@ -78,21 +129,28 @@
           polygonCounties(counties) {
             return counties.filter(county => county.polygon.centroid != null);
           },
-          countyRegions(polygonCounties, caseIndex) {
+          countyRegions(polygonCounties, caseIndex, mode) {
             return polygonCounties
               .map(county =>
                 county.polygon.centroid.multipoly.map(poly => ({
                   poly,
                   county,
-                  value: county.cases[caseIndex]
+                  value:
+                    mode == "cases"
+                      ? county.cases[caseIndex]
+                      : county.deaths[caseIndex]
                 }))
               )
               .flat(1);
           },
-          countyCircles(polygonCounties, caseIndex) {
+          countyCircles(polygonCounties, caseIndex, mode) {
             return polygonCounties.map(county => ({
               position: [county.polygon.centroid.x, county.polygon.centroid.y],
-              radius: Math.sqrt(county.cases[caseIndex]),
+              radius: Math.sqrt(
+                mode == "cases"
+                  ? county.cases[caseIndex]
+                  : county.deaths[caseIndex]
+              ),
               county
             }));
           },
@@ -106,20 +164,32 @@
               )
               .flat(1);
           },
-          textData(states, polygonCounties, caseIndex, maxCountyCases) {
+          textData(states, polygonCounties, caseIndex, maxCountyCases, mode) {
             return polygonCounties
-              .filter(county => county.cases[caseIndex] > 0)
+              .filter(
+                county =>
+                  (mode == "cases"
+                    ? county.cases[caseIndex]
+                    : county.deaths[caseIndex]) > 0
+              )
               .map(county => ({
-                label: `${county.name} ${county.cases[caseIndex]}`,
+                label: `${county.name} ${(mode == "cases"
+                  ? county.cases[caseIndex]
+                  : county.deaths[caseIndex]
+                ).toLocaleString()}`,
                 position: [
                   county.polygon.centroid.x,
                   county.polygon.centroid.y
                 ],
-                weight: Math.sqrt(county.cases[caseIndex])
+                weight: Math.sqrt(
+                  mode == "cases"
+                    ? county.cases[caseIndex]
+                    : county.deaths[caseIndex]
+                )
               }))
               .concat(
                 states.map(state => ({
-                  label: state.name,
+                  label: state.shortcode,
                   position: [
                     state.polygon.centroid.x,
                     state.polygon.centroid.y
@@ -147,7 +217,7 @@
               // onHover: info => console.log("state", info.object, info.x, info.y)
             });
           },
-          countyLayer(countyRegions, maxCountyCases) {
+          countyLayer(countyRegions, maxCountyCases, showCounties) {
             return new PolygonLayer({
               id: "county-regions",
               data: countyRegions,
@@ -171,6 +241,7 @@
                 shade = 255 - shade * 255;
                 return [255, shade, shade];
               },
+              opacity: showCounties ? 1 : 0,
               lineWidthMinPixels: 0.5,
               lineWidthMaxPixels: 0.5,
               extruded: false,
@@ -187,7 +258,8 @@
               // Animation
               transitions: {
                 getLineColor: TRANSITION,
-                getFillColor: TRANSITION
+                getFillColor: TRANSITION,
+                opacity: TRANSITION
               }
             });
           },
@@ -205,11 +277,11 @@
               }
             });
           },
-          circleLayer(countyCircles) {
+          circleLayer(countyCircles, effectiveCircleScale) {
             return new ScatterplotLayer({
               id: "county-circles",
               data: countyCircles,
-              radiusScale: 0.5,
+              radiusScale: effectiveCircleScale / 100,
               stroked: true,
               getFillColor: [255, 0, 0, 51],
               getLineColor: [255, 0, 0, 204],
@@ -230,15 +302,14 @@
               }
             });
           },
-          textLayer(textData) {
-            console.log("GOT TEXT DATA", textData);
+          textLayer(textData, showTextLabels) {
             return new TagmapLayer({
               id: "text-layer",
               data: textData,
               getLabel: x => x.label,
               getPosition: x => x.position,
-              minFontSize: 10,
-              maxFontSize: 14,
+              minFontSize: showTextLabels ? 10 : 0,
+              maxFontSize: showTextLabels ? 14 : 0,
               colorScheme: [[0, 0, 0, 100]],
               weightThreshold: 50
             });
@@ -265,29 +336,125 @@
 
   onMount(async () => {
     data = new Data(await downloadData());
-    data.deck = initDeck();
+    const { deck, zoom } = initDeck();
+    data.initialZoom = zoom;
+    data.zoom = zoom;
+    data.deck = deck;
     console.log("DATA", data);
     console.log("VIEWPORT", data.deck);
-    await tick();
-    data.caseIndex = data.numDays - 1;
     loading = false;
   });
 
   function initDeck() {
-    console.log(canvasElem);
-    return new Deck({
+    const screenWidth = windowWidth;
+    const screenHeight = windowHeight;
+    const scale = Math.min(
+      screenWidth / data.width,
+      screenHeight / data.height
+    );
+    const zoom = Math.log2(scale) - 0.1;
+    console.log("ZM", zoom, scale);
+
+    const deck = new Deck({
       parent: canvasElem,
       coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
       width: "100%",
       height: "100%",
-      views: new OrthographicView({ controller: { keyboard: false } }),
+      views: new OrthographicView({
+        controller: { keyboard: false }
+      }),
       initialViewState: {
         coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
-        x: data.midX,
-        y: data.midY
+        target: [data.midX, data.midY],
+        zoom,
+        minZoom: -3,
+        maxZoom: 8
+      },
+      onViewStateChange(e) {
+        const zoom = e.zoom || e.viewState.zoom;
+        data.zoom = zoom;
+        if (e.hackyForceViewStateChange) {
+          e.hackyCounter = hackyCounter++;
+          deck.setProps({
+            initialViewState: {
+              ...e
+            }
+          });
+          return;
+        }
+
+        panned = true;
+        return;
+
+        const { viewState } = e;
+        const scale = Math.pow(2, viewState.zoom);
+        const width = windowWidth * scale;
+        const height = windowHeight * scale;
+        const xMin = viewState.target[0] - width / 2 + 200;
+        const xMax = viewState.target[0] + width / 2 - 200;
+        const yMin = viewState.target[1] - height / 2 + 200;
+        const yMax = viewState.target[1] + height / 2 - 200;
+        console.log("XMIN", xMin, data.minX);
+
+        let dx = 0;
+        let dy = 0;
+        if (xMax < data.minX) {
+          dx = data.minX - xMax + 1;
+        } else if (xMin > data.maxX) {
+          dx = data.maxX - xMin - 1;
+        }
+
+        console.log("DX", dx);
+
+        if (dx != 0 || dy != 0) {
+          deck.setProps({
+            viewState: {
+              ...viewState.viewState,
+              target: [viewState.target[0] + dx, viewState.target[1] + dy]
+            }
+          });
+        }
+      },
+      getTooltip(info) {
+        const { object } = info;
+        if (object == null) return { style: { opacity: 0, display: "none" } };
+
+        const getStateHtml = stateName => {
+          return `<div class="block"><div class="type">State</div><div>${stateName}</div>
+<p><b>${data.stateCases[stateName][data.caseIndex].toLocaleString()}</b> case${
+            data.stateCases[stateName][data.caseIndex] == 1 ? "" : "s"
+          }<br/>
+<b>${data.stateDeaths[stateName][data.caseIndex].toLocaleString()}</b> death${
+            data.stateDeaths[stateName][data.caseIndex] == 1 ? "" : "s"
+          }</p></div>`;
+        };
+
+        if (object.state != null) {
+          // Show state data
+          return {
+            html: getStateHtml(object.state.name),
+            style: { opacity: 1, display: "block" }
+          };
+        }
+        if (object.county != null) {
+          // Show county data
+          return {
+            html: `<div class="block"><div class="type">County</div><div>${
+              object.county.name
+            }, ${object.county.state}</div>
+<p><b>${object.county.cases[data.caseIndex].toLocaleString()}</b> case${
+              object.county.cases[data.caseIndex] == 1 ? "" : "s"
+            }<br/>
+<b>${object.county.deaths[data.caseIndex].toLocaleString()}</b> death${
+              object.county.deaths[data.caseIndex] == 1 ? "" : "s"
+            }</p></div>${getStateHtml(object.county.state)}`,
+            style: { opacity: 1, display: "block" }
+          };
+        }
       },
       layers: data.layers
     });
+    return { deck, zoom };
   }
 </script>
 
@@ -303,123 +470,70 @@
     color: inherit;
     text-decoration: inherit;
 
-    &:hover {
+    @include on-hover {
       opacity: 0.8;
+    }
+  }
+
+  :global(.deck-tooltip) {
+    @media only screen and (max-width: 600px) {
+      display: none !important;
+    }
+
+    transition: opacity 0.5s ease;
+
+    :global(.type) {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    :global(p) {
+      margin: 5px 0;
+    }
+
+    :global(.block) {
+      display: inline-block;
+      margin: 0 5px;
+
+      &:not(:first-child) {
+        padding-left: 10px;
+        margin-left: 10px;
+        border-left: solid 1px rgba(255, 255, 255, 0.2);
+      }
     }
   }
 
   .canvas {
     position: relative;
     width: 100%;
-    height: calc(100% - #{$headerHeight});
+    height: 100%;
   }
 
-  .dates {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: $datesHeight;
-    overflow-x: scroll;
-    overflow-y: hidden;
-    white-space: nowrap;
-    -ms-overflow-style: none;
+  button {
+    background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(1px);
-    box-shadow: 0 0 2px #00000026;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-
-    .date {
-      display: inline-block;
-      height: $datesHeight;
-      text-align: center;
-      padding: 10px 15px 0 15px;
-      box-sizing: border-box;
-      color: rgba(0, 0, 0, 0.6);
-      position: relative;
-      user-select: none;
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.05);
-        cursor: pointer;
-
-        &.selected {
-          background: #ffe3e3;
-        }
-      }
-
-      .text {
-        color: black;
-        mix-blend-mode: hard-light;
-        text-shadow: 0 0 2px white;
-        z-index: 1;
-      }
-
-      .bar {
-        position: absolute;
-        left: 5px;
-        right: 5px;
-        background: red;
-        bottom: 0;
-        opacity: 0.5;
-      }
-
-      &.selected {
-        background: #ffe3e3;
-
-        .bar {
-          opacity: 0.8;
-        }
-      }
-
-      .weekday {
-        font-weight: bold;
-        font-size: 12px;
-        text-align: left;
-      }
-
-      .cases {
-        padding: 7px 0 0 0;
-        font-weight: bold;
-      }
-
-      .casestext {
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-    }
+    padding: 5px;
+    outline: none;
+    border: solid 1px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 4;
   }
 </style>
 
-<Header />
+<Header {data} />
 <div class="canvas" bind:this={canvasElem} />
-{#if loading}
-  Loading...
-{:else}
-  <div class="dates" bind:this={casesElem}>
-    {#each data.dates as { text, weekday }, i}
-      <div
-        class="date"
-        class:selected={data.caseIndex == i}
-        on:click={() => (data.caseIndex = i)}>
-        <div
-          class="bar"
-          style="height: {(data.totalCases[i] / data.maxTotalCases) * 95}%" />
-        <div class="text">
-          <div class="weekday">{weekday}</div>
-          <div class="day">{text}</div>
-          <div class="cases">{data.totalCases[i].toLocaleString()}</div>
-          <div class="casestext">cases</div>
-        </div>
-      </div>
-    {/each}
-  </div>
+{#if data != null && panned}
+  <button on:click={resetZoom}>Reset</button>
 {/if}
+<Footer {data} />
 
 <svelte:window
+  bind:innerWidth={windowWidth}
+  bind:innerHeight={windowHeight}
+  on:resize={() => (panned = true)}
   on:keydown={e => {
     if (data == null) return;
     if (e.code == 'ArrowLeft') {
