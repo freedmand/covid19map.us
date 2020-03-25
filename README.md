@@ -1,5 +1,7 @@
 # Covid19Map.us
 
+![](public/media/demo.gif)
+
 A zoomable, historical map of COVID-19 cases in the United States by county. This project is written in [Svelte](https://svelte.dev/)/JavaScript and makes extensive use of the mapping/visualization library [deck.gl](https://deck.gl).
 
 The dataset is provided by [USAFacts](https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/).
