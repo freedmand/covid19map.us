@@ -213,7 +213,6 @@
     <div class="caption">
       Total US
       {#if data.mode == 'cases'}cases{:else}deaths{/if}
-      per day
     </div>
 
     <div class="number pad">
