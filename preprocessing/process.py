@@ -130,6 +130,10 @@ def process_map(fn):
     return features_by_id
 
 
+def int_convert(num):
+    return int(num.replace(",", ""))
+
+
 states_poly = process_map("geo/states.json")
 county_poly = process_map("geo/counties.json")
 
@@ -146,14 +150,17 @@ with open("covid_confirmed_usafacts.csv", "r", encoding="latin-1") as confirmed_
                 # First day in the dataset
                 # Subsequent columns are subsequent days
                 first_date = confirmed_row[4]
+                num_dates = len(
+                    [datum for datum in confirmed_row[4:] if len(datum.strip()) > 0]
+                )
                 skip_header = False
                 continue
 
-            county_fips = int(confirmed_row[0])
+            county_fips = int_convert(confirmed_row[0])
             county = confirmed_row[1]
             state = confirmed_row[2].strip()
-            state_fips = int(confirmed_row[3])
-            confirmed_counts = confirmed_row[4:]
+            state_fips = int_convert(confirmed_row[3])
+            confirmed_counts = confirmed_row[4 : 4 + num_dates]
 
             states[state].append([county, county_fips, confirmed_counts])
             states_by_fips[state] = state_fips
@@ -164,8 +171,10 @@ with open("covid_confirmed_usafacts.csv", "r", encoding="latin-1") as confirmed_
                 skip_header = False
                 continue
 
-            state, county_fips = deaths_row[2].strip(), int(deaths_row[0])
-            deaths_counts = deaths_row[4:]
+            if deaths_row[0].strip() == "":
+                continue
+            state, county_fips = deaths_row[2].strip(), int_convert(deaths_row[0])
+            deaths_counts = deaths_row[4 : 4 + num_dates]
             found = False
             for county in states[state]:
                 if county[1] == county_fips and len(county) == 3:
@@ -182,8 +191,9 @@ with open("covid_confirmed_usafacts.csv", "r", encoding="latin-1") as confirmed_
                 if len(county) == 3:
                     county.append(["0"] * len(county[2]))
 
-with open('last_updated.txt', 'r') as f:
+with open("last_updated.txt", "r") as f:
     last_updated = f.read().strip()
+
 
 def expand_runs(data):
     result = []
@@ -217,7 +227,7 @@ def process_runs(data):
         runs.append(run[0])
 
     for datum in data:
-        datum = int(datum)
+        datum = int_convert(datum)
         if len(run) != 0 and datum != run[-1]:
             push_run()
             run = []
