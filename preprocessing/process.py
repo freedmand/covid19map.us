@@ -131,6 +131,8 @@ def process_map(fn):
 
 
 def int_convert(num):
+    if num == " ":
+        num = "0"
     return int(num.replace(",", ""))
 
 
