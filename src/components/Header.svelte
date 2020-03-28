@@ -66,7 +66,7 @@
     display: inline-block;
     cursor: pointer;
     text-align: center;
-    width: 100px;
+    width: 120px;
 
     @include on-hover {
       background: rgba(0, 0, 0, 0.08);

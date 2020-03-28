@@ -218,7 +218,7 @@
 <Header {data} />
 <div class="canvas" bind:this={canvasElem} />
 {#if data != null && panned}
-  <button on:click={resetZoom}>Reset</button>
+  <button on:click={resetZoom}>Recenter</button>
 {/if}
 <Footer {data} />
 

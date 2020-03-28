@@ -5,6 +5,19 @@ import struct
 
 states = collections.defaultdict(list)
 
+# Custom FIPS
+custom_fips = [
+    ["New York City Unallocated", "NY", "9900001"],
+]
+
+# Renames
+renames = {
+    2270: [2158, "Kusilvak"],
+    46113: [46102, "Oglala Lakota"],
+    51515: [51019],  # Bedford County -> Bedford City
+}
+
+
 shortcodes = {
     "AK": "Alaska",
     "AL": "Alabama",
@@ -162,9 +175,35 @@ with open("covid_confirmed_usafacts.csv", "r", encoding="latin-1") as confirmed_
             county = confirmed_row[1]
             state = confirmed_row[2].strip()
             state_fips = int_convert(confirmed_row[3])
-            confirmed_counts = confirmed_row[4 : 4 + num_dates]
+            confirmed_counts = [
+                int_convert(x) for x in confirmed_row[4 : 4 + num_dates]
+            ]
+            if county_fips != 0 and all(count == 0 for count in confirmed_counts):
+                continue
 
-            states[state].append([county, county_fips, confirmed_counts])
+            # Map FIPS
+            for mapped_county, mapped_state, new_fips in custom_fips:
+                if county.lower() == mapped_county.lower() and state == mapped_state:
+                    county_fips = new_fips
+
+            # Renames
+            if county_fips in renames:
+                rename_data = renames[county_fips]
+                county_fips = rename_data[0]
+                if len(rename_data) == 2:
+                    county = rename_data[1]
+
+            found = False
+            for old_county, old_county_fips, _ in states[state]:
+                if county == old_county and county_fips == old_county_fips:
+                    found = True
+                    states[state][2] = [
+                        sum(x) for x in zip(states[state][2], confirmed_counts)
+                    ]
+
+            if not found:
+                states[state].append([county, county_fips, confirmed_counts])
+
             states_by_fips[state] = state_fips
 
         skip_header = True
@@ -175,16 +214,41 @@ with open("covid_confirmed_usafacts.csv", "r", encoding="latin-1") as confirmed_
 
             if deaths_row[0].strip() == "":
                 continue
-            state, county_fips = deaths_row[2].strip(), int_convert(deaths_row[0])
-            deaths_counts = deaths_row[4 : 4 + num_dates]
+            deaths_county, state, county_fips = (
+                deaths_row[1],
+                deaths_row[2].strip(),
+                int_convert(deaths_row[0]),
+            )
+            deaths_counts = [int_convert(x) for x in deaths_row[4 : 4 + num_dates]]
+
+            # Map FIPS
+            for mapped_county, mapped_state, new_fips in custom_fips:
+                if (
+                    deaths_county.lower() == mapped_county.lower()
+                    and state == mapped_state
+                ):
+                    county_fips = new_fips
+
+            # Renames
+            if county_fips in renames:
+                rename_data = renames[county_fips]
+                county_fips = rename_data[0]
+                if len(rename_data) == 2:
+                    deaths_county = rename_data[1]
+
             found = False
             for county in states[state]:
-                if county[1] == county_fips and len(county) == 3:
-                    county.append(deaths_counts)
-                    found = True
+                if county[1] == county_fips:
+                    if len(county) == 3:
+                        county.append(deaths_counts)
+                        found = True
+                    elif len(county) == 4:
+                        # Sum in deaths county
+                        county[3] = [sum(x) for x in zip(county[3], deaths_counts)]
+
             if not found:
-                if not all(count == "0" for count in deaths_counts):
-                    print(county_fips)
+                if not all(count == 0 for count in deaths_counts):
+                    print(state, deaths_county, county_fips, deaths_counts)
                     raise Exception("non-matching death count")
 
         # Fill in unfound death data
@@ -229,7 +293,6 @@ def process_runs(data):
         runs.append(run[0])
 
     for datum in data:
-        datum = int_convert(datum)
         if len(run) != 0 and datum != run[-1]:
             push_run()
             run = []
@@ -284,7 +347,11 @@ with open("../public/output.bin", "wb") as f:
             elif county_fips == 49040:
                 county_fips = 49049  # Fix data error for Utah County, UT
 
-            if county_fips == 0 or county_fips == 6000:  # Grand Princess Cruise Ship
+            if (
+                county_fips == 0
+                or county_fips == 6000
+                or county_fips in [fips[-1] for fips in custom_fips]
+            ):  # Grand Princess Cruise Ship
                 out_poly(b"")
             else:
                 out_poly(county_poly[county_fips])
