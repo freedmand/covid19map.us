@@ -1,12 +1,20 @@
 <script>
   import Link from "@/router/Link";
+  import SearchPane from "@/components/SearchPane";
   import DatePane from "@/components/DatePane";
+  import Modal from "@/components/Modal";
+
+  // SVG assets
+  import searchSvg from "@/assets/search.svg";
+  import plusSvg from "@/assets/plus.svg";
 
   export let data = null;
   let showDatePane = false;
+  let showSearchPane = false;
   let playing = false;
   let playTimer = null;
   const PLAY_INTERVAL = 500;
+  let showMetrics = false;
 
   function stop() {
     playing = false;
@@ -37,20 +45,39 @@
 <style lang="scss">
   header {
     color: black;
-    height: $headerHeight;
-    line-height: $headerHeight;
-    padding: 0 20px;
+    padding: 5px 20px;
+    line-height: 20px;
     font-size: 16px;
     position: absolute;
     top: 0;
     z-index: 2;
-    text-shadow: 0 0 2px white;
+    background: rgba(255, 255, 255, 0.5);
+    width: 100%;
+    backdrop-filter: blur(1px);
     user-select: none;
 
     > :global(*) {
       margin: 0 8px;
       display: inline-block;
       vertical-align: middle;
+    }
+  }
+
+  .search {
+    position: absolute;
+    right: 0;
+    width: 60px;
+    top: 8px;
+  }
+
+  .plus {
+    display: inline-block;
+    vertical-align: middle;
+    width: 85px;
+    cursor: pointer;
+
+    @include on-hover {
+      opacity: 0.8;
     }
   }
 
@@ -62,15 +89,22 @@
     }
   }
 
-  .day {
+  .block {
     display: inline-block;
     cursor: pointer;
     text-align: center;
-    width: 120px;
 
     @include on-hover {
       background: rgba(0, 0, 0, 0.08);
     }
+  }
+
+  .day {
+    width: 120px;
+  }
+
+  .metric {
+    padding: 0 5px;
   }
 
   .action {
@@ -93,8 +127,12 @@
   }
 </style>
 
-{#if showDatePane && data != null}
+{#if data != null && showSearchPane}
+  <SearchPane {data} on:dismiss={() => (showSearchPane = false)} />
+{:else if data != null && showDatePane}
   <DatePane {data} on:dismiss={() => (showDatePane = false)} />
+{:else if showMetrics}
+  <Modal on:dismiss={() => (showMetrics = false)}>Hi</Modal>
 {:else}
   <header>
     <div class="showdesktop">
@@ -105,6 +143,9 @@
     {#if data == null}
       <div>Loading...</div>
     {:else}
+      <div class="search">
+        {@html searchSvg}
+      </div>
       <div>
         {#if data.caseIndex > 0}
           <span class="arrow action" on:click={() => (data.caseIndex = 0)}>
@@ -114,7 +155,7 @@
             &lt;
           </span>
         {/if}
-        <span class="day" on:click={() => (showDatePane = true)}>
+        <span class="block day" on:click={() => (showDatePane = true)}>
           {data.dates[data.caseIndex].weekday}, {data.dates[data.caseIndex].text}
         </span>
         {#if data.caseIndex < data.numDays - 1}
@@ -129,31 +170,26 @@
         {/if}
       </div>
       <div>
-        <span
-          class="day cases"
-          class:inactive={data.mode != 'cases'}
-          on:click={() => {
-            if (data.mode == 'cases') {
-              showDatePane = true;
-            } else {
-              data.mode = 'cases';
-            }
-          }}>
-          {data.totalCases[data.caseIndex].toLocaleString()}
-          {#if data.totalCases[data.caseIndex] == 1}case{:else}cases{/if}
+        {#each data.metrics as metric}
+          <span
+            class="block metric"
+            class:inactive={data.activeMetric != metric.key}
+            on:click={() => {
+              if (data.isActive(metric)) {
+                showDatePane = true;
+              } else {
+                data.activeMetric = metric.key;
+              }
+            }}>
+            {metric.getTotal(data).toLocaleString()}
+            {metric.handlePlural(metric.getTotal(data))}
+          </span>
+        {/each}
+        <span class="plus" on:click={() => (showMetrics = true)}>
+          {@html plusSvg}
         </span>
-        <span
-          class="day deaths"
-          class:inactive={data.mode != 'deaths'}
-          on:click={() => {
-            if (data.mode == 'deaths') {
-              showDatePane = true;
-            } else {
-              data.mode = 'deaths';
-            }
-          }}>
-          {data.totalDeaths[data.caseIndex].toLocaleString()}
-          {#if data.totalDeaths[data.caseIndex] == 1}death{:else}deaths{/if}
+        <span class="plus" on:click={() => (showMetrics = true)}>
+          {@html plusSvg}
         </span>
       </div>
     {/if}

@@ -96,42 +96,62 @@
       getTooltip(info) {
         const { object } = info;
         if (object == null || !data.showTooltips) {
+          if (info.x == -1 && info.y == -1) {
+            return {
+              style: {
+                opacity: 0,
+                transition: "none"
+              }
+            };
+          }
           return { style: { opacity: 0, display: "none" } };
         }
 
         const getCountyHtml = county => {
-          if (
-            county.cases[data.caseIndex] == 0 &&
-            county.deaths[data.caseIndex] == 0
-          ) {
-            return "";
+          if (data.getCounty(county) == 0) return "";
+
+          let html = `<div class="block"><div class="type">County</div><div>${county.name}, ${county.state}</div><p>`;
+
+          for (let i = 0; i < data.metrics.length; i++) {
+            const metric = data.metrics[i];
+            const amount = metric.getCounty(data, county, data.caseIndex);
+            html += `<div class="toolstat${
+              data.isActive(metric) ? "" : " inactive"
+            }"><b>${amount.toLocaleString()}</b> ${metric.handlePlural(
+              amount
+            )}</div>`;
           }
-          return `<div class="block"><div class="type">County</div><div>${
-            county.name
-          }, ${county.state}</div>
-<p><b>${county.cases[data.caseIndex].toLocaleString()}</b> case${
-            county.cases[data.caseIndex] == 1 ? "" : "s"
-          }<br/>
-<b>${county.deaths[data.caseIndex].toLocaleString()}</b> death${
-            county.deaths[data.caseIndex] == 1 ? "" : "s"
-          }</p></div>`;
+
+          html += "</p></div>";
+          return html;
         };
 
         const getStateHtml = stateName => {
-          return `<div class="block"><div class="type">State</div><div>${stateName}</div>
-<p><b>${data.stateCases[stateName][data.caseIndex].toLocaleString()}</b> case${
-            data.stateCases[stateName][data.caseIndex] == 1 ? "" : "s"
-          }<br/>
-<b>${data.stateDeaths[stateName][data.caseIndex].toLocaleString()}</b> death${
-            data.stateDeaths[stateName][data.caseIndex] == 1 ? "" : "s"
-          }</p></div>`;
+          let html = `<div class="block"><div class="type">State</div><div>${stateName}</div><p>`;
+
+          for (let i = 0; i < data.metrics.length; i++) {
+            const metric = data.metrics[i];
+            const amount = metric.getState(data, stateName, data.caseIndex);
+            html += `<div class="toolstat${
+              data.isActive(metric) ? "" : " inactive"
+            }"><b>${amount.toLocaleString()}</b> ${metric.handlePlural(
+              amount
+            )}</div>`;
+          }
+
+          html += "</p></div>";
+          return html;
         };
 
         if (object.state != null) {
           // Show state data
           return {
             html: getStateHtml(object.state.name),
-            style: { opacity: 1, display: "block" }
+            style: {
+              opacity: 1,
+              display: "block",
+              transition: "opacity 0.5s ease"
+            }
           };
         }
         if (object.county != null) {
@@ -140,7 +160,11 @@
             html: `${getCountyHtml(object.county)}${getStateHtml(
               object.county.state
             )}`,
-            style: { opacity: 1, display: "block" }
+            style: {
+              opacity: 1,
+              display: "block",
+              transition: "opacity 0.5s ease"
+            }
           };
         }
       },
@@ -194,6 +218,11 @@
         border-left: solid 1px rgba(255, 255, 255, 0.2);
       }
     }
+
+    :global(.inactive) {
+      opacity: 0.7;
+      font-size: 14px;
+    }
   }
 
   .canvas {
@@ -212,6 +241,10 @@
     bottom: 20px;
     right: 20px;
     z-index: 4;
+
+    @media only screen and (max-width: 600px) {
+      bottom: 40px;
+    }
   }
 </style>
 
