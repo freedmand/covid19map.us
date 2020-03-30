@@ -8,7 +8,8 @@ const TRANSITION = {
   type: "spring"
 };
 
-const MAX_WEIGHT = 400;
+const MAX_WEIGHT = 320;
+const TEXT_SCALE_ADJUSTMENT = 400000;
 
 export const allMetrics = [
   {
@@ -29,6 +30,9 @@ export const allMetrics = [
     },
     getState(data, state, i) {
       return data.stateCases[state][i];
+    },
+    format(num) {
+      return num.toLocaleString();
     }
   },
   {
@@ -49,6 +53,9 @@ export const allMetrics = [
     },
     getState(data, state, i) {
       return data.stateDeaths[state][i];
+    },
+    format(num) {
+      return num.toLocaleString();
     }
   },
   {
@@ -76,6 +83,9 @@ export const allMetrics = [
       const cases = data.stateCases[state][i];
       const yesterday = i - 1 < 0 ? 0 : data.stateCases[state][i - 1];
       return Math.max(cases - yesterday, 0);
+    },
+    format(num) {
+      return num.toLocaleString();
     }
   },
   {
@@ -103,6 +113,9 @@ export const allMetrics = [
       const cases = data.stateDeaths[state][i];
       const yesterday = i - 1 < 0 ? 0 : data.stateDeaths[state][i - 1];
       return Math.max(cases - yesterday, 0);
+    },
+    format(num) {
+      return num.toLocaleString();
     }
   },
   {
@@ -115,16 +128,17 @@ export const allMetrics = [
       if (i == null) i = data.caseIndex;
       return data.totalCases[i] == 0 ? 0 : (data.totalDeaths[i] / data.totalCases[i]);
     },
-    max(data) {
-      return Math.max(...data.totalCases.map((cases, i) => {
-        return cases == 0 ? 0 : (data.totalDeaths[i] / cases);
-      }))
+    max() {
+      return 100;
     },
     getCounty(_, county, i) {
       return county.cases[i] == 0 ? 0 : (county.deaths[i] / county.cases[i]);
     },
     getState(data, state, i) {
       return data.stateCases[state][i] == 0 ? 0 : (data.stateDeaths[state][i] / data.stateCases[state][i]);
+    },
+    format(num) {
+      return `${(num * 100).toFixed(1)}%`;
     }
   },
 ];
@@ -142,7 +156,7 @@ export class Data extends Svue {
           activeMetric: "cases",
           activeMetrics: ['cases', 'deaths'],
           caseIndex: data.numDays - 1,
-          circleScale: 50,
+          circleScale: 4000,
           retainCircleSize: true,
           showTextLabels: true,
           initialZoom: 0,
@@ -218,6 +232,11 @@ export class Data extends Svue {
             .flat(1);
         },
         countyCircles(polygonCounties, caseIndex, normalizeCircles, metric) {
+          console.log(Math.max(...polygonCounties.map(county => (
+            Math.sqrt(
+              metric.getCounty(this, county, caseIndex) / (normalizeCircles ? metric.max(this) : 1)
+            ) * (normalizeCircles ? MAX_WEIGHT : 1)
+          ))));
           return polygonCounties.map(county => ({
             position: [county.polygon.centroid.x, county.polygon.centroid.y],
             radius: Math.sqrt(
@@ -250,7 +269,7 @@ export class Data extends Svue {
               ],
               weight: Math.sqrt(
                 metric.getCounty(this, county, caseIndex) / (normalizeCircles ? metric.max(this) : 1)
-              ) * (normalizeCircles ? MAX_WEIGHT : 1)
+              ) * (normalizeCircles ? MAX_WEIGHT : 1) * TEXT_SCALE_ADJUSTMENT
             }))
             .concat(
               states.map(state => ({
@@ -259,7 +278,7 @@ export class Data extends Svue {
                   state.polygon.centroid.x,
                   state.polygon.centroid.y
                 ],
-                weight: normalizeCircles ? MAX_WEIGHT : maxTotalCases
+                weight: (normalizeCircles ? MAX_WEIGHT : maxTotalCases) * TEXT_SCALE_ADJUSTMENT
               }))
             );
         },
@@ -438,7 +457,7 @@ export class Data extends Svue {
 
     if (add) {
       if (!this.activeMetrics.includes(metric)) {
-        this.activeMetrics = [...this.activeMetrics, metric];
+        this.activeMetrics = allMetrics.map(x => x.key).filter(x => [...this.activeMetrics, metric].includes(x));
       }
     } else {
       this.activeMetrics = fillIfNone(this.activeMetrics.filter(x => x != metric));

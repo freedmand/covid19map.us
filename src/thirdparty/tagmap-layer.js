@@ -22,7 +22,7 @@ const defaultProps = {
   weightThreshold: 1
 };
 
-const MAX_CACHED_ZOOM_LEVEL = 0;
+const MAX_CACHED_ZOOM_LEVEL = -Infinity;
 
 export default class TagmapLayer extends CompositeLayer {
   initializeState() {

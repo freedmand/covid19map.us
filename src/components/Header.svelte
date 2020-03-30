@@ -1,7 +1,7 @@
 <script>
   import Link from "@/router/Link";
-  import DatePane from "@/components/DatePane";
   import SearchPane from "@/components/SearchPane";
+  import DatePane from "@/components/DatePane";
   import MetricsPane from "@/components/MetricsPane";
   import Modal from "@/components/Modal";
   import Sparkline from "@/components/Sparkline";

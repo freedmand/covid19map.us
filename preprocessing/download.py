@@ -1,10 +1,14 @@
 import urllib.request
 
-cases_url = "https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_confirmed_usafacts.csv"
-deaths_url = "https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_deaths_usafacts.csv"
+all_data_url = "https://usafactsstatic.blob.core.windows.net/public/2020/coronavirus-timeline/allData.json"
+states_url = "https://usafactsstatic.blob.core.windows.net/public/2020/coronavirus-timeline/states.json"
+counties_url = "https://usafactsstatic.blob.core.windows.net/public/2020/coronavirus-timeline/map.json"
 
-with open("covid_confirmed_usafacts.csv", "wb") as f:
-    f.write(urllib.request.urlopen(cases_url).read())
+with open("all_data.json", "wb") as f:
+    f.write(urllib.request.urlopen(all_data_url).read())
 
-with open("covid_deaths_usafacts.csv", "wb") as f:
-    f.write(urllib.request.urlopen(deaths_url).read())
+with open("geo/states.topo.json", "wb") as f:
+    f.write(urllib.request.urlopen(states_url).read())
+
+with open("geo/counties.topo.json", "wb") as f:
+    f.write(urllib.request.urlopen(counties_url).read())
