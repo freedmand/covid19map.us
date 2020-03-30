@@ -1,4 +1,5 @@
 import csv
+import math
 import collections
 import json
 import struct
@@ -91,20 +92,25 @@ def is_clockwise(coords):
     return total >= 0
 
 
-def pack_simple_coords(coords):
+def pack_simple_coords(coords, bounds):
+    [x_min, x_max, y_min, y_max] = bounds
+    width = x_max - x_min
+    height = y_max - y_min
+    max_scale = max(width, height)
+
     result = b""
     for coord in coords:
-        x = coord["x"]
-        y = coord["y"]
-        result += struct.pack("2f", x, y)
+        x = math.floor((coord["x"] - x_min) / (max_scale) * (256 * 256 - 1))
+        y = math.floor((coord["y"] - y_min) / (max_scale) * (256 * 256 - 1))
+        result += struct.pack("2H", x, y)
     return result
 
 
-def pack_coords(coords, is_hole=False):
+def pack_coords(coords, bounds, is_hole=False):
     if depth(coords) > 2:
         results = b""
         for i, coord in enumerate(coords):
-            results = results + pack_coords(coord, is_hole=i != 0)
+            results = results + pack_coords(coord, bounds, is_hole=i != 0)
         return results
 
     results = []
@@ -125,20 +131,62 @@ def pack_coords(coords, is_hole=False):
     if results[0]["x"] != results[-1]["x"] or results[0]["y"] != results[-1]["y"]:
         results.append(results[0])
 
-    return pack_simple_coords(results)
+    return pack_simple_coords(results, bounds)
 
 
-def process_map(fn):
+def get_bounds(maps):
+    x_min = None
+    y_min = None
+    x_max = None
+    y_max = None
+
+    def process_coords(coords):
+        nonlocal x_min
+        nonlocal y_min
+        nonlocal x_max
+        nonlocal y_max
+
+        if depth(coords) > 2:
+            for coord in coords:
+                process_coords(coord)
+            return
+
+        for x, y in coords:
+            if x_min is None or x < x_min:
+                x_min = x
+            if x_max is None or x > x_max:
+                x_max = x
+            if y_min is None or y < y_min:
+                y_min = y
+            if y_max is None or y > y_max:
+                y_max = y
+
+    for fn in maps:
+        with open(fn) as f:
+            contents = json.load(f)
+
+        for feature in contents["features"]:
+            if feature["geometry"] is None:
+                continue
+            coords = feature["geometry"]["coordinates"]
+            process_coords(coords)
+
+    return [x_min, x_max, y_min, y_max]
+
+
+def process_map(fn, bounds):
     with open(fn) as f:
         contents = json.load(f)
 
     features_by_id = {}
     for feature in contents["features"]:
-        fips_id = int(feature["id"])
+        fips_id = int(
+            feature["properties"]["STATE"] + feature["properties"].get("COUNTY", "")
+        )
         if feature["geometry"] is None:
             continue
         coords = feature["geometry"]["coordinates"]
-        features_by_id[fips_id] = pack_coords(coords)
+        features_by_id[fips_id] = pack_coords(coords, bounds)
 
     return features_by_id
 
@@ -149,8 +197,10 @@ def int_convert(num):
     return int(num.replace(",", ""))
 
 
-states_poly = process_map("geo/states.json")
-county_poly = process_map("geo/counties.json")
+bounds = get_bounds(["geo/states.json", "geo/counties.json"])
+
+states_poly = process_map("geo/states.json", bounds)
+county_poly = process_map("geo/counties.json", bounds)
 
 states_by_fips = {}
 
@@ -322,7 +372,7 @@ with open("../public/output.bin", "wb") as f:
     def out_poly(p):
         while position % 4 != 0:
             write(b" ")
-        write(struct.pack("i", len(p) // 4))
+        write(struct.pack("i", len(p) // 2))
         write(p)
         write(b"\n")
 

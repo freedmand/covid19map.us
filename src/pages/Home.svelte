@@ -75,8 +75,8 @@
         coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
         target: [data.midX, data.midY],
         zoom,
-        minZoom: -3,
-        maxZoom: 8
+        minZoom: -10,
+        maxZoom: 1
       },
       onViewStateChange(e) {
         const zoom = e.zoom || e.viewState.zoom;

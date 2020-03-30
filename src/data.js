@@ -17,7 +17,7 @@ export class Data extends Svue {
           deck: null,
           mode: "cases",
           caseIndex: data.numDays - 1,
-          circleScale: 50,
+          circleScale: 4000,
           retainCircleSize: true,
           showTextLabels: true,
           initialZoom: 0,
@@ -129,7 +129,7 @@ export class Data extends Svue {
                 mode == "cases"
                   ? county.cases[caseIndex]
                   : county.deaths[caseIndex]
-              )
+              ) * 400000
             }))
             .concat(
               states.map(state => ({
@@ -138,7 +138,7 @@ export class Data extends Svue {
                   state.polygon.centroid.x,
                   state.polygon.centroid.y
                 ],
-                weight: Math.sqrt(data.maxCountyCases)
+                weight: Math.sqrt(data.maxCountyCases) * 400000
               }))
             );
         },

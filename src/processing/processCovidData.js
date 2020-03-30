@@ -161,12 +161,13 @@ export function processCovidData(arrayBuffer) {
     const lenBuffer = new Int32Array(arrayBuffer, position, 1);
     const length = lenBuffer[0];
     position += 4;
-    const coordBuffer = new Float32Array(arrayBuffer, position, length);
-    position += length * 4 + 1;
+    const coordBuffer = new Uint16Array(arrayBuffer, position, length);
+    position += length * 2 + 1;
+    const convertedCoordBuffer = Float32Array.from(coordBuffer);
 
     return {
-      coords: coordBuffer,
-      centroid: getCentroid(coordBuffer)
+      coords: convertedCoordBuffer,
+      centroid: getCentroid(convertedCoordBuffer)
     };
   };
 
@@ -281,6 +282,7 @@ export function processCovidData(arrayBuffer) {
 
   // Calculate max circle size
   const maxCircleSize = Math.sqrt(maxCountyCases) * circleScale;
+  console.log('max circle', maxCircleSize);
   circleScale = DESIRED_MAX_CIRCLE_SIZE / maxCircleSize;
 
   const rawDates = [];
