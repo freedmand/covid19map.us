@@ -1,53 +1,14 @@
 <script>
-  import emitter from "@/emit";
+  import Modal from "@/components/Modal";
+  import Sparkline from "@/components/Sparkline";
 
   export let data;
   let activeColumn = null;
 
   $: effectiveIndex = activeColumn == null ? data.caseIndex : activeColumn;
-
-  const emit = emitter({
-    dismiss() {}
-  });
 </script>
 
 <style lang="scss">
-  .pane {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(1px);
-    z-index: 10;
-  }
-
-  .close {
-    margin: 10px;
-    padding: 3px;
-    font-size: 20px;
-    line-height: 20px;
-    width: 20px;
-    text-align: center;
-    display: inline-block;
-    cursor: pointer;
-    user-select: none;
-    @include on-hover {
-      background: rgba(0, 0, 0, 0.08);
-    }
-  }
-
-  .content {
-    position: absolute;
-    left: 40px;
-    right: 20px;
-    top: 0;
-    bottom: 0;
-    overflow: auto;
-    padding: 10px 20px;
-  }
-
   .settings {
     padding-bottom: 100px;
     line-height: 24px;
@@ -83,7 +44,7 @@
     max-height: 300px;
     position: relative;
 
-    svg {
+    :global(svg) {
       display: block;
       overflow: visible;
       pointer-events: none;
@@ -181,8 +142,7 @@
   }
 </style>
 
-<div class="pane">
-  <span class="close" on:click={emit.dismiss}>&times;</span>
+<Modal on:dismiss>
   <div class="content">
     <h1>
       <span class="weekday">{data.dates[effectiveIndex].weekday}</span>
@@ -190,34 +150,28 @@
     </h1>
 
     <div class="stats">
-      <div
-        class="row"
-        class:inactive={data.mode != 'cases'}
-        on:click={() => (data.mode = 'cases')}>
-        <span class="num">
-          {data.totalCases[effectiveIndex].toLocaleString()}
-        </span>
-        {#if data.totalCases[effectiveIndex] == 1}case{:else}cases{/if}
-      </div>
-      <div
-        class="row"
-        class:inactive={data.mode != 'deaths'}
-        on:click={() => (data.mode = 'deaths')}>
-        <span class="num">
-          {data.totalDeaths[effectiveIndex].toLocaleString()}
-        </span>
-        {#if data.totalDeaths[effectiveIndex] == 1}death{:else}deaths{/if}
-      </div>
+      {#each data.metrics as metric}
+        <div
+          class="row"
+          class:inactive={data.activeMetric != metric.key}
+          on:click={() => (data.activeMetric = metric.key)}>
+          <span class="num">
+            {metric.getTotal(data, effectiveIndex).toLocaleString()}
+          </span>
+          {metric.handlePlural(metric.getTotal(data, effectiveIndex))}
+        </div>
+      {/each}
     </div>
 
     <div class="caption">
       Total US
-      {#if data.mode == 'cases'}cases{:else}deaths{/if}
+      <!-- Force plural -->
+      {data.handlePlural(2)}
     </div>
 
     <div class="number pad">
       <div class="right">
-        {(data.mode == 'cases' ? data.totalCases[data.numDays - 1] : data.totalDeaths[data.numDays - 1]).toLocaleString()}
+        {data.getTotal(data.numDays - 1).toLocaleString()}
       </div>
     </div>
     <div class="svg">
@@ -230,36 +184,11 @@
           on:click={() => (data.caseIndex = i)}
           style="left: {((i - 0.5) / (data.numDays - 1)) * 100}%; width: {(1 / data.numDays) * 100}%" />
       {/each}
-      <svg
-        width="100%"
-        height="100%"
-        viewBox="0 0 1 1"
-        preserveAspectRatio="none">
-        <polyline
-          points={data.dates
-            .map((day, i) => `${i / (data.numDays - 1)},${1 - (data.mode == 'cases' ? data.totalCases[i] / data.maxTotalCases : data.totalDeaths[i] / data.maxTotalDeaths)}`)
-            .concat(['1,1', '0,1'])
-            .join(' ')}
-          fill="rgba(255, 0, 0, 0.2)" />
-        <polyline
-          points={data.dates
-            .map(
-              (day, i) =>
-                `${i / (data.numDays - 1)},${1 -
-                  (data.mode == 'cases'
-                    ? data.totalCases[i] / data.maxTotalCases
-                    : data.totalDeaths[i] / data.maxTotalDeaths)}`
-            )
-            .join(' ')}
-          vector-effect="non-scaling-stroke"
-          fill="none"
-          stroke="red"
-          stroke-width="2" />
-      </svg>
+      <Sparkline {data} metric={data.metric} />
       {#each data.dates as date, i}
         <div
           class="circle"
-          style="left: {(i / (data.numDays - 1)) * 100}%;top: {(1 - (data.mode == 'cases' ? data.totalCases[i] / data.maxTotalCases : data.totalDeaths[i] / data.maxTotalDeaths)) * 100}%" />
+          style="left: {(i / (data.numDays - 1)) * 100}%;top: {(1 - data.getTotal(i) / data.max()) * 100}%" />
       {/each}
       <div class="number">
         <div class="left">{data.dates[0].text}</div>
@@ -294,12 +223,16 @@
       </div>
       <div>
         <label>
+          Normalize circle size
+          <input type="checkbox" bind:checked={data.normalizeCircles} />
+        </label>
+      </div>
+      <div>
+        <label>
           Circle scaling
           <input type="range" min="0" max="100" bind:value={data.circleScale} />
         </label>
       </div>
     </div>
   </div>
-</div>
-
-<svelte:window on:keydown={e => e.key == 'Escape' && emit.dismiss()} />
+</Modal>

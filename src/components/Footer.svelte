@@ -8,6 +8,9 @@
     bottom: 0;
     padding: 5px;
     font-size: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    width: 100%;
+    backdrop-filter: blur(1px);
     color: rgba(0, 0, 0, 0.4);
 
     > * {
