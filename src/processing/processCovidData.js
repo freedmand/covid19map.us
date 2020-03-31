@@ -282,7 +282,6 @@ export function processCovidData(arrayBuffer) {
 
   // Calculate max circle size
   const maxCircleSize = Math.sqrt(maxCountyCases) * circleScale;
-  console.log('max circle', maxCircleSize);
   circleScale = DESIRED_MAX_CIRCLE_SIZE / maxCircleSize;
 
   const rawDates = [];

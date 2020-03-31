@@ -16,7 +16,7 @@ export const allMetrics = [
     key: 'cases',
     description: 'Cumulative number of confirmed cases',
     handlePlural(count) {
-      return count == 1 ? 'case' : 'cases';
+      return count == 1 ? 'total case' : 'total cases';
     },
     getTotal(data, i = null) {
       if (i == null) i = data.caseIndex;
@@ -39,7 +39,7 @@ export const allMetrics = [
     key: 'deaths',
     description: 'Cumulative number of deaths',
     handlePlural(count) {
-      return count == 1 ? 'death' : 'deaths';
+      return count == 1 ? 'total death' : 'total deaths';
     },
     getTotal(data, i = null) {
       if (i == null) i = data.caseIndex;
@@ -232,11 +232,6 @@ export class Data extends Svue {
             .flat(1);
         },
         countyCircles(polygonCounties, caseIndex, normalizeCircles, metric) {
-          console.log(Math.max(...polygonCounties.map(county => (
-            Math.sqrt(
-              metric.getCounty(this, county, caseIndex) / (normalizeCircles ? metric.max(this) : 1)
-            ) * (normalizeCircles ? MAX_WEIGHT : 1)
-          ))));
           return polygonCounties.map(county => ({
             position: [county.polygon.centroid.x, county.polygon.centroid.y],
             radius: Math.sqrt(
@@ -262,7 +257,7 @@ export class Data extends Svue {
                 (metric.getCounty(this, county, caseIndex)) > 0
             )
             .map(county => ({
-              label: `${county.name} ${metric.getCounty(this, county, caseIndex).toLocaleString()}`,
+              label: `${county.name} ${metric.format(metric.getCounty(this, county, caseIndex))}`,
               position: [
                 county.polygon.centroid.x,
                 county.polygon.centroid.y
@@ -363,7 +358,7 @@ export class Data extends Svue {
             data: countyCircles,
             radiusScale: effectiveCircleScale / 100,
             stroked: true,
-            getFillColor: [255, 0, 0, 51],
+            getFillColor: [255, 0, 0, 35],
             getLineColor: [255, 0, 0, 204],
             lineWidthMinPixels: 0.5,
             lineWidthMaxPixels: 0.5,
@@ -434,6 +429,10 @@ export class Data extends Svue {
     if (i == null) i = this.caseIndex;
 
     return this.metric.getState(this, state, i);
+  }
+
+  format(num) {
+    return this.metric.format(num);
   }
 
   isActive(metric) {

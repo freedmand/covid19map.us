@@ -85,7 +85,9 @@
           e.hackyCounter = hackyCounter++;
           deck.setProps({
             initialViewState: {
-              ...e
+              ...e,
+              minZoom: deck.viewState.minZoom,
+              maxZoom: deck.viewState.maxZoom
             }
           });
           return;
@@ -117,7 +119,7 @@
             const amount = metric.getCounty(data, county, data.caseIndex);
             html += `<div class="toolstat${
               data.isActive(metric) ? "" : " inactive"
-            }"><b>${amount.toLocaleString()}</b> ${metric.handlePlural(
+            }"><b>${metric.format(amount)}</b> ${metric.handlePlural(
               amount
             )}</div>`;
           }
@@ -134,7 +136,7 @@
             const amount = metric.getState(data, stateName, data.caseIndex);
             html += `<div class="toolstat${
               data.isActive(metric) ? "" : " inactive"
-            }"><b>${amount.toLocaleString()}</b> ${metric.handlePlural(
+            }"><b>${metric.format(amount)}</b> ${metric.handlePlural(
               amount
             )}</div>`;
           }

@@ -55,8 +55,13 @@
     z-index: 2;
     background: rgba(255, 255, 255, 0.5);
     width: 100%;
+    box-sizing: border-box;
     backdrop-filter: blur(1px);
     user-select: none;
+
+    @media only screen and (max-width: 600px) {
+      padding: 5px 5px;
+    }
 
     > :global(*) {
       margin: 0 8px;
@@ -68,8 +73,8 @@
   .search {
     position: absolute;
     right: 0;
-    width: 60px;
-    top: 8px;
+    width: 25px;
+    top: 9px;
     cursor: pointer;
 
     @include on-hover {
@@ -78,9 +83,10 @@
   }
 
   .plus {
-    display: inline-block;
-    vertical-align: middle;
-    width: 85px;
+    position: absolute;
+    right: 48px;
+    top: 9px;
+    width: 6px;
     cursor: pointer;
 
     @include on-hover {
@@ -151,6 +157,9 @@
     {#if data == null}
       <div>Loading...</div>
     {:else}
+      <div class="plus" on:click={() => (showMetrics = true)}>
+        {@html plusSvg}
+      </div>
       <div class="search" on:click={() => (showSearchPane = true)}>
         {@html searchSvg}
       </div>
@@ -189,13 +198,10 @@
                 data.activeMetric = metric.key;
               }
             }}>
-            {metric.getTotal(data).toLocaleString()}
+            {metric.format(metric.getTotal(data))}
             {metric.handlePlural(metric.getTotal(data))}
           </span>
         {/each}
-        <span class="plus" on:click={() => (showMetrics = true)}>
-          {@html plusSvg}
-        </span>
       </div>
     {/if}
   </header>

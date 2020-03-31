@@ -156,7 +156,7 @@
           class:inactive={data.activeMetric != metric.key}
           on:click={() => (data.activeMetric = metric.key)}>
           <span class="num">
-            {metric.getTotal(data, effectiveIndex).toLocaleString()}
+            {metric.format(metric.getTotal(data, effectiveIndex))}
           </span>
           {metric.handlePlural(metric.getTotal(data, effectiveIndex))}
         </div>
@@ -170,9 +170,7 @@
     </div>
 
     <div class="number pad">
-      <div class="right">
-        {data.getTotal(data.numDays - 1).toLocaleString()}
-      </div>
+      <div class="right">{data.format(data.getTotal(data.numDays - 1))}</div>
     </div>
     <div class="svg">
       {#each data.dates as date, i}
@@ -230,7 +228,11 @@
       <div>
         <label>
           Circle scaling
-          <input type="range" min="0" max="100" bind:value={data.circleScale} />
+          <input
+            type="range"
+            min="0"
+            max="20000"
+            bind:value={data.circleScale} />
         </label>
       </div>
     </div>

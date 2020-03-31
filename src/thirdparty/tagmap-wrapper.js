@@ -40,14 +40,11 @@ export default class TagMapWrapper {
   }
 
   extractCluster({ scale, weightThreshold }) {
-
     if (scale >= 16 / (2 ** 7)) {
       weightThreshold = 0;
     } else {
       weightThreshold /= scale ** 3;
     }
-
-    console.log("SW", scale, weightThreshold);
 
     const project = p => {
       p[0] *= scale;

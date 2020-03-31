@@ -246,7 +246,8 @@ for key in fips_map:
     for i in range(len(data["cases"])):
         cases = data["cases"][i]
         deaths = data["deaths"][i]
-        if deaths > cases:
+        # Only show unmatched deaths on normal FIPS codes
+        if deaths > cases and key[1] != "00":
             # Assume it's an error
             print(
                 f"UNMATCHED DEATHS, {deaths} deaths > {cases} cases [{i}], {fips_map[key]['county']}, {fips_map[key]['state']}"

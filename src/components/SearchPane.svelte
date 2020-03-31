@@ -185,7 +185,7 @@
             {/each}
           </div>
           <div class="metric">
-            {data.getCounty(county).toLocaleString()}
+            {data.format(data.getCounty(county))}
             {data.handlePlural(data.getCounty(county))}
           </div>
         </div>
