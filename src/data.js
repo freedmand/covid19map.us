@@ -59,6 +59,54 @@ export const allMetrics = [
     }
   },
   {
+    key: 'casesPer100k',
+    description: 'Cumulative cases per 100,000 people',
+    handlePlural(count) {
+      return Math.round(count) == 1 ? 'case per 100,000' : 'cases per 100,000';
+    },
+    getTotal(data, i = null) {
+      if (i == null) i = data.caseIndex;
+      return data.totalCases[i] / data.totalPopulation * 100000;
+    },
+    max() {
+      return 100000;
+    },
+    getCounty(_, county, i) {
+      return county.cases[i] / county.stats.population * 100000;
+    },
+    getState(data, state, i) {
+      return data.stateCases[state][i] / data.statesByName[state].stats.population * 100000;
+    },
+    format(num) {
+      if (!isFinite(num)) return 'N/A';
+      return Math.round(num).toLocaleString();
+    }
+  },
+  {
+    key: 'deathsPer100k',
+    description: 'Cumulative deaths per 100,000 people',
+    handlePlural(count) {
+      return Math.round(count) == 1 ? 'death per 100,000' : 'deaths per 100,000';
+    },
+    getTotal(data, i = null) {
+      if (i == null) i = data.caseIndex;
+      return data.totalDeaths[i] / data.totalPopulation * 100000;
+    },
+    max() {
+      return 2000;
+    },
+    getCounty(_, county, i) {
+      return county.deaths[i] / county.stats.population * 100000;
+    },
+    getState(data, state, i) {
+      return data.stateDeaths[state][i] / data.statesByName[state].stats.population * 100000;
+    },
+    format(num) {
+      if (!isFinite(num)) return 'N/A';
+      return Math.round(num).toLocaleString();
+    }
+  },
+  {
     key: 'newCases',
     description: 'New cases per day',
     handlePlural(count) {
@@ -163,6 +211,8 @@ export class Data extends Svue {
           showCounties: true,
           showTooltips: true,
           normalizeCircles: true,
+          countyMinPopFilter: -1,
+          countyMaxPopFilter: 1000000000,
           zoom: 0
         };
       },
@@ -174,6 +224,9 @@ export class Data extends Svue {
         },
       },
       computed: {
+        countyFilter(countyMinPopFilter, countyMaxPopFilter) {
+          return county => county.stats.population >= countyMinPopFilter && county.stats.population <= countyMaxPopFilter
+        },
         metrics(activeMetrics) {
           return activeMetrics.map(x => metrics[x]);
         },
@@ -219,24 +272,29 @@ export class Data extends Svue {
         polygonCounties(counties) {
           return counties.filter(county => county.polygon.centroid != null);
         },
-        countyRegions(polygonCounties, metric, caseIndex) {
+        countyRegions(polygonCounties, metric, countyFilter, caseIndex) {
           return polygonCounties
             .map(county =>
               county.polygon.centroid.multipoly.map(poly => ({
                 poly,
                 county,
                 value:
-                  metric.getCounty(this, county, caseIndex)
+                  // Apply filters
+                  countyFilter(county) ?
+                    metric.getCounty(this, county, caseIndex) : 0
               }))
             )
             .flat(1);
         },
-        countyCircles(polygonCounties, caseIndex, normalizeCircles, metric) {
+        countyCircles(polygonCounties, caseIndex, normalizeCircles, countyFilter, metric) {
           return polygonCounties.map(county => ({
             position: [county.polygon.centroid.x, county.polygon.centroid.y],
-            radius: Math.sqrt(
-              metric.getCounty(this, county, caseIndex) / (normalizeCircles ? metric.max(this) : 1)
-            ) * (normalizeCircles ? MAX_WEIGHT : 1),
+            radius:
+              // Apply filters
+              countyFilter(county) ?
+                Math.sqrt(
+                  metric.getCounty(this, county, caseIndex) / (normalizeCircles ? metric.max(this) : 1)
+                ) * (normalizeCircles ? MAX_WEIGHT : 1) : 0,
             county
           }));
         },
@@ -250,11 +308,12 @@ export class Data extends Svue {
             )
             .flat(1);
         },
-        textData(states, polygonCounties, caseIndex, normalizeCircles, maxTotalCases, metric) {
+        textData(states, polygonCounties, caseIndex, normalizeCircles, maxTotalCases, countyFilter, metric) {
           return polygonCounties
             .filter(
               county =>
-                (metric.getCounty(this, county, caseIndex)) > 0
+                // Apply filters
+                (metric.getCounty(this, county, caseIndex)) > 0 && countyFilter(county)
             )
             .map(county => ({
               label: `${county.name} ${metric.format(metric.getCounty(this, county, caseIndex))}`,
@@ -295,7 +354,7 @@ export class Data extends Svue {
             pickable: true
           });
         },
-        countyLayer(countyRegions, maxCountyCases, showCounties) {
+        countyLayer(countyRegions, normalizeCircles, metric, showCounties) {
           return new PolygonLayer({
             id: "county-regions",
             data: countyRegions,
@@ -303,7 +362,7 @@ export class Data extends Svue {
             getLineColor: d => {
               if (d.value == 0) return [255, 255, 255, 0];
               let shade = Math.max(
-                Math.pow(d.value / maxCountyCases, 0.3) * 0.5,
+                Math.pow(d.value / (normalizeCircles ? metric.max(this) : 1), 0.3) * 0.5,
                 0.08
               );
               shade = 255 - shade * 255;
@@ -313,7 +372,7 @@ export class Data extends Svue {
             getFillColor: d => {
               if (d.value == 0) return [255, 255, 255, 0];
               let shade = Math.max(
-                Math.pow(d.value / maxCountyCases, 0.3) * 0.5,
+                Math.pow(d.value / (normalizeCircles ? metric.max(this) : 1), 0.3) * 0.5,
                 0.08
               );
               shade = 255 - shade * 255;

@@ -3,6 +3,8 @@ import math
 import collections
 import json
 import struct
+from datetime import datetime
+import pytz
 
 
 # FIP renaming
@@ -192,6 +194,31 @@ def int_convert(num):
     return int(num.replace(",", ""))
 
 
+populations = {}
+state_populations = {}
+
+
+def lpad(s, desired_length):
+    return "0" * max(desired_length - len(s), 0) + s
+
+
+# Process census populations
+with open("population/co-est2018-alldata.csv", "r", encoding="latin-1") as f:
+    csvreader = csv.reader(f)
+    next(csvreader)  # Skip header
+    for row in csvreader:
+        state_fips = lpad(row[3], 2)
+        county_fips = lpad(row[4], 3)
+        population = int_convert(row[17])
+        if county_fips == "000":
+            state_populations[row[5]] = population
+        else:
+            combined_fips = state_fips + county_fips
+            if combined_fips in renames:
+                combined_fips = renames[combined_fips]
+            populations[combined_fips] = population
+
+
 bounds = get_bounds(["geo/states.json", "geo/counties.json"])
 
 states_poly = process_map("geo/states.json", bounds)
@@ -263,6 +290,16 @@ for x in fips_map.values():
 with open("last_updated.txt", "r") as f:
     last_updated = f.read().strip()
 
+# # Get last updated time
+# def floor_dt(dt, interval):
+#     # Courtesy of https://stackoverflow.com/a/56387775
+#     replace = (dt.minute // interval) * interval
+#     return dt.replace(minute=replace, second=0, microsecond=0)
+
+
+# dt = floor_dt(datetime.now(tz=pytz.utc), 30).astimezone(timezone("US/Pacific"))
+# last_updated = dt.strftime("%b %d, %Y at %I:%M %p %Z").replace(" 0", " ")
+
 
 def expand_runs(data):
     result = []
@@ -322,10 +359,12 @@ with open("../public/output.bin", "wb") as f:
     def out_str(s):
         write((s + "\n").encode("utf8"))
 
-    def out_poly(p):
+    def out_poly(p, population=None):
         while position % 4 != 0:
             write(b" ")
         write(struct.pack("i", len(p) // 2))
+        if len(p) > 0:
+            write(struct.pack("i", population))
         write(p)
         write(b"\n")
 
@@ -335,7 +374,8 @@ with open("../public/output.bin", "wb") as f:
         counties = states[state]
         counties = sorted(counties, key=lambda x: x["county"])
         out_str(">" + state + "-" + shortcodes[state])
-        out_poly(states_poly[states_by_fips[state]])
+        population = state_populations[shortcodes[state]]
+        out_poly(states_poly[states_by_fips[state]], population)
 
         for row in counties:
             county = row["county"]
@@ -348,11 +388,13 @@ with open("../public/output.bin", "wb") as f:
 
             if (
                 county_fips == "00"
+                or county.lower() == "new york city unallocated"
                 or county_fips == "06000"  # Grand Princess Cruise Ship
             ):
                 out_poly(b"")
             else:
-                out_poly(county_poly[county_fips])
+                population = populations[county_fips]
+                out_poly(county_poly[county_fips], population)
             out_str(display_nums(process_runs(confirmed_data)))
             out_str(display_nums(process_runs(deaths_data)))
 

@@ -44,11 +44,14 @@
     text = text.toLowerCase();
     resultsAmount = 20;
     return data.counties
+      .filter(county => data.countyFilter(county))
       .map(county => {
         const countyName = `${county.name}, ${county.state}`;
         let { score, highlights } = searchScore(countyName, text);
         // Tie breaker
-        score += data.getCounty(county) / data.max();
+        let result = data.getCounty(county);
+        if (!isFinite(result)) result = -1;
+        score += result / data.max();
         return { county, countyName, score, highlights };
       })
       .sort((a, b) => b.score - a.score);

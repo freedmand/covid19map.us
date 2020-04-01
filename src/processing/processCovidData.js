@@ -24,6 +24,7 @@ export function processCovidData(arrayBuffer) {
   let stateDeaths = {};
   let totalCases = [];
   let totalDeaths = [];
+  let totalPopulation = 0;
   let maxCountyCases = 0;
   let maxCountyDeaths = 0;
 
@@ -161,13 +162,24 @@ export function processCovidData(arrayBuffer) {
     const lenBuffer = new Int32Array(arrayBuffer, position, 1);
     const length = lenBuffer[0];
     position += 4;
+
+    let population = null;
+    if (length > 0) {
+      // Read additional stats
+      const popBuffer = new Int32Array(arrayBuffer, position, 1);
+      population = popBuffer[0];
+      position += 4;
+    }
+
     const coordBuffer = new Uint16Array(arrayBuffer, position, length);
     position += length * 2 + 1;
     const convertedCoordBuffer = Float32Array.from(coordBuffer);
 
     return {
-      coords: convertedCoordBuffer,
-      centroid: getCentroid(convertedCoordBuffer)
+      polygon: {
+        coords: convertedCoordBuffer,
+        centroid: getCentroid(convertedCoordBuffer),
+      }, stats: { population }
     };
   };
 
@@ -207,12 +219,15 @@ export function processCovidData(arrayBuffer) {
     const name = readLine();
     if (name.startsWith(">")) {
       const parts = name.substr(1).split("-");
+      const { polygon, stats } = readPolygon();
       const results = {
         type: "state",
         shortcode: parts[0],
         name: parts[1],
-        polygon: readPolygon()
+        polygon,
+        stats
       };
+      totalPopulation += stats.population;
       currentState = results.name;
 
       // Initialize state cases/deaths
@@ -220,11 +235,13 @@ export function processCovidData(arrayBuffer) {
       stateDeaths[currentState] = [];
       return results;
     } else {
+      const { polygon, stats } = readPolygon();
       let results = {
         type: "county",
         state: currentState,
         name,
-        polygon: readPolygon()
+        polygon,
+        stats,
       };
       const { results: cases, maxAmount: numCountyCases } = readCases();
       const { results: deaths, maxAmount: numCountyDeaths } = readCases();
@@ -315,14 +332,23 @@ export function processCovidData(arrayBuffer) {
     if (yMax > globalMaxY) globalMaxY = yMax;
   }
 
+  // Convert states to dictionary
+  const statesByName = {};
+  for (let i = 0; i < states.length; i++) {
+    const state = states[i];
+    statesByName[state.name] = state;
+  }
+
   return {
     firstDate,
     states,
+    statesByName,
     counties,
     stateCases,
     stateDeaths,
     totalCases,
     totalDeaths,
+    totalPopulation,
     maxTotalCases: Math.max(...totalCases),
     maxTotalDeaths: Math.max(...totalDeaths),
     maxCountyCases,

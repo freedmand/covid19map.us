@@ -68,6 +68,20 @@
     padding: 5px 10px;
     font-size: 14px;
   }
+
+  .filter {
+    margin: 7px 0;
+    padding: 0 20px 15px 24px;
+    border: solid 1px rgba(0, 0, 0, 0.5);
+    width: calc(100% - 80px);
+    background: rgba(255, 255, 255, 0.7);
+    max-width: 600px;
+    user-select: none;
+
+    .option {
+      padding: 5px 0;
+    }
+  }
 </style>
 
 <Modal on:dismiss>
@@ -91,5 +105,111 @@
       </label>
     </div>
   {/each}
+  <h1>Filters</h1>
+  <p>
+    Apply filters to restrict the data. Only counties that pass all the
+    specified filters will be shown.
+  </p>
+  <div class="filter">
+    <p>
+      <b>Show counties with at least the specified population</b>
+    </p>
+    <div class="option">
+      <label>
+        <input type="radio" bind:group={$data.countyMinPopFilter} value={-1} />
+        Show all counties
+      </label>
+    </div>
+
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMinPopFilter}
+          value={100000} />
+        Only show counties with population over 100,000
+      </label>
+    </div>
+
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMinPopFilter}
+          value={200000} />
+        Only show counties with population over 200,000
+      </label>
+    </div>
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMinPopFilter}
+          value={500000} />
+        Only show counties with population over 500,000
+      </label>
+    </div>
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMinPopFilter}
+          value={1000000} />
+        Only show counties with population over 1,000,000
+      </label>
+    </div>
+  </div>
+  <div class="filter">
+    <p>
+      <b>Show counties with at most the specified population</b>
+    </p>
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMaxPopFilter}
+          value={1000000000} />
+        Show all counties
+      </label>
+    </div>
+
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMaxPopFilter}
+          value={100000} />
+        Only show counties with population at most 100,000
+      </label>
+    </div>
+
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMaxPopFilter}
+          value={200000} />
+        Only show counties with population at most 200,000
+      </label>
+    </div>
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMaxPopFilter}
+          value={500000} />
+        Only show counties with population at most 500,000
+      </label>
+    </div>
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMaxPopFilter}
+          value={1000000} />
+        Only show counties with population at most 1,000,000
+      </label>
+    </div>
+  </div>
   <button on:click={emit.dismiss}>Ok</button>
 </Modal>
