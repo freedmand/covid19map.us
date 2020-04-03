@@ -44,7 +44,7 @@
     text = text.toLowerCase();
     resultsAmount = 20;
     return data.counties
-      .filter(county => data.countyFilter(county))
+      .filter(county => data.countyFilter(county, data.caseIndex))
       .map(county => {
         const countyName = `${county.name}, ${county.state}`;
         let { score, highlights } = searchScore(countyName, text);

@@ -213,6 +213,7 @@ export class Data extends Svue {
           normalizeCircles: true,
           countyMinPopFilter: -1,
           countyMaxPopFilter: 1000000000,
+          countyMinCasesFilter: -1,
           zoom: 0
         };
       },
@@ -224,8 +225,8 @@ export class Data extends Svue {
         },
       },
       computed: {
-        countyFilter(countyMinPopFilter, countyMaxPopFilter) {
-          return county => county.stats.population >= countyMinPopFilter && county.stats.population <= countyMaxPopFilter
+        countyFilter(countyMinPopFilter, countyMaxPopFilter, countyMinCasesFilter) {
+          return (county, i) => county.stats.population >= countyMinPopFilter && county.stats.population <= countyMaxPopFilter && county.cases[i] >= countyMinCasesFilter
         },
         metrics(activeMetrics) {
           return activeMetrics.map(x => metrics[x]);
@@ -280,7 +281,7 @@ export class Data extends Svue {
                 county,
                 value:
                   // Apply filters
-                  countyFilter(county) ?
+                  countyFilter(county, caseIndex) ?
                     metric.getCounty(this, county, caseIndex) : 0
               }))
             )
@@ -291,7 +292,7 @@ export class Data extends Svue {
             position: [county.polygon.centroid.x, county.polygon.centroid.y],
             radius:
               // Apply filters
-              countyFilter(county) ?
+              countyFilter(county, caseIndex) ?
                 Math.sqrt(
                   metric.getCounty(this, county, caseIndex) / (normalizeCircles ? metric.max(this) : 1)
                 ) * (normalizeCircles ? MAX_WEIGHT : 1) : 0,
@@ -313,7 +314,7 @@ export class Data extends Svue {
             .filter(
               county =>
                 // Apply filters
-                (metric.getCounty(this, county, caseIndex)) > 0 && countyFilter(county)
+                (metric.getCounty(this, county, caseIndex)) > 0 && countyFilter(county, caseIndex)
             )
             .map(county => ({
               label: `${county.name} ${metric.format(metric.getCounty(this, county, caseIndex))}`,

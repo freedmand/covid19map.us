@@ -211,5 +211,58 @@
       </label>
     </div>
   </div>
+
+  <div class="filter">
+    <p>
+      <b>Show counties with at least the specified cases</b>
+    </p>
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMinCasesFilter}
+          value={-1} />
+        Show all counties
+      </label>
+    </div>
+
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMinCasesFilter}
+          value={100} />
+        Only show counties with at least 100 cases
+      </label>
+    </div>
+
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMinCasesFilter}
+          value={500} />
+        Only show counties with at least 500 cases
+      </label>
+    </div>
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMinCasesFilter}
+          value={1000} />
+        Only show counties with at least 1,000 cases
+      </label>
+    </div>
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMinCasesFilter}
+          value={2000} />
+        Only show counties with at least 2,000 cases
+      </label>
+    </div>
+  </div>
   <button on:click={emit.dismiss}>Ok</button>
 </Modal>
