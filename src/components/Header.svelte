@@ -3,20 +3,21 @@
   import SearchPane from "@/components/SearchPane";
   import DatePane from "@/components/DatePane";
   import MetricsPane from "@/components/MetricsPane";
+  import SettingsPane from "@/components/SettingsPane";
   import Modal from "@/components/Modal";
   import Sparkline from "@/components/Sparkline";
+
+  import { show, resetShow } from "@/show";
 
   // SVG assets
   import searchSvg from "@/assets/search.svg";
   import plusSvg from "@/assets/plus.svg";
 
   export let data = null;
-  let showDatePane = false;
   let showSearchPane = false;
   let playing = false;
   let playTimer = null;
   const PLAY_INTERVAL = 500;
-  let showMetrics = false;
 
   function stop() {
     playing = false;
@@ -143,10 +144,16 @@
 
 {#if data != null && showSearchPane}
   <SearchPane {data} on:dismiss={() => (showSearchPane = false)} />
-{:else if data != null && showDatePane}
-  <DatePane {data} on:dismiss={() => (showDatePane = false)} />
-{:else if data != null && showMetrics}
-  <MetricsPane {data} on:dismiss={() => (showMetrics = false)} />
+{:else if data != null && show.showMetrics}
+  <MetricsPane {data} on:dismiss={() => (show.showMetrics = false)} />
+{:else if data != null && $show.showAll}
+  <DatePane {data} on:dismiss={resetShow} />
+{:else if data != null && $show.showCounty}
+  <DatePane {data} county={$show.county} on:dismiss={resetShow} />
+{:else if data != null && $show.showState}
+  <DatePane {data} state={$show.state} on:dismiss={resetShow} />
+{:else if data != null && $show.showSettings}
+  <SettingsPane {data} on:dismiss={() => (show.showSettings = false)} />
 {:else}
   <header>
     <div class="showdesktop">
@@ -157,7 +164,7 @@
     {#if data == null}
       <div>Loading...</div>
     {:else}
-      <div class="plus" on:click={() => (showMetrics = true)}>
+      <div class="plus" on:click={() => (show.showMetrics = true)}>
         {@html plusSvg}
       </div>
       <div class="search" on:click={() => (showSearchPane = true)}>
@@ -172,7 +179,7 @@
             &lt;
           </span>
         {/if}
-        <span class="block day" on:click={() => (showDatePane = true)}>
+        <span class="block day" on:click={() => (show.showAll = true)}>
           {data.dates[data.caseIndex].weekday}, {data.dates[data.caseIndex].text}
         </span>
         {#if data.caseIndex < data.numDays - 1}
@@ -193,7 +200,7 @@
             class:inactive={data.activeMetric != metric.key}
             on:click={() => {
               if (data.isActive(metric)) {
-                showDatePane = true;
+                show.showAll = true;
               } else {
                 data.activeMetric = metric.key;
               }

@@ -14,6 +14,8 @@
   } from "@/processing/processCovidData";
   import { Data } from "@/data";
 
+  import { show } from "@/show";
+
   let tooltip = null;
   let hideTooltip = true;
   let tooltipElem;
@@ -104,6 +106,17 @@
           hideTooltip = false;
         }
       },
+      onClick(info) {
+        if (info.object != null && info.object.county != null) {
+          if (data.getCounty(info.object.county, data.caseIndex) != 0) {
+            show.showCounty = true;
+            show.county = info.object.county;
+          } else {
+            show.showState = true;
+            show.state = info.object.county.state;
+          }
+        }
+      },
       onViewStateChange(e) {
         const zoom = e.zoom || e.viewState.zoom;
         data.zoom = zoom;
@@ -120,82 +133,6 @@
         }
 
         panned = true;
-      },
-      getTooltip(info) {
-        return { style: { opacity: 0 } };
-        const { object } = info;
-        if (object == null || !data.showTooltips) {
-          if (info.x == -1 && info.y == -1) {
-            return {
-              style: {
-                opacity: 0,
-                transition: "none"
-              }
-            };
-          }
-          return { style: { opacity: 0, display: "none" } };
-        }
-
-        const getCountyHtml = county => {
-          if (data.getCounty(county) == 0) return "";
-
-          let html = `<div class="block"><div class="type">County</div><div>${county.name}, ${county.state}</div><p>`;
-
-          for (let i = 0; i < data.metrics.length; i++) {
-            const metric = data.metrics[i];
-            const amount = metric.getCounty(data, county, data.caseIndex);
-            html += `<div class="toolstat${
-              data.isActive(metric) ? "" : " inactive"
-            }"><b>${metric.format(amount)}</b> ${metric.handlePlural(
-              amount
-            )}</div>`;
-          }
-
-          html += "</p></div>";
-          return html;
-        };
-
-        const getStateHtml = stateName => {
-          let html = `<div class="block"><div class="type">State</div><div>${stateName}</div><p>`;
-
-          for (let i = 0; i < data.metrics.length; i++) {
-            const metric = data.metrics[i];
-            const amount = metric.getState(data, stateName, data.caseIndex);
-            html += `<div class="toolstat${
-              data.isActive(metric) ? "" : " inactive"
-            }"><b>${metric.format(amount)}</b> ${metric.handlePlural(
-              amount
-            )}</div>`;
-          }
-
-          html += "</p></div>";
-          return html;
-        };
-
-        if (object.state != null) {
-          // Show state data
-          return {
-            html: getStateHtml(object.state.name),
-            style: {
-              opacity: 1,
-              display: "block",
-              transition: "opacity 0.5s ease"
-            }
-          };
-        }
-        if (object.county != null) {
-          // Show county data
-          return {
-            html: `${getCountyHtml(object.county)}${getStateHtml(
-              object.county.state
-            )}`,
-            style: {
-              opacity: 1,
-              display: "block",
-              transition: "opacity 0.5s ease"
-            }
-          };
-        }
       },
       layers: data.layers
     });

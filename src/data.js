@@ -167,6 +167,174 @@ export const allMetrics = [
     }
   },
   {
+    key: 'newCasesWeek',
+    description: 'New cases per week',
+    handlePlural(count) {
+      return count == 1 ? 'new case in a week' : 'new cases in a week';
+    },
+    getTotal(data, i = null) {
+      if (i == null) i = data.caseIndex;
+      const lastWeek = i - 7 < 0 ? 0 : data.totalCases[i - 7];
+      return Math.max(data.totalCases[i] - lastWeek, 0);
+    },
+    max(data) {
+      return Math.max(...data.totalCases.map((cases, i) => {
+        const lastWeek = i - 7 < 0 ? 0 : data.totalCases[i - 7];
+        return Math.max(cases - lastWeek, 0);
+      }))
+    },
+    getCounty(_, county, i) {
+      const lastWeek = i - 7 < 0 ? 0 : county.cases[i - 7];
+      return Math.max(county.cases[i] - lastWeek, 0);
+    },
+    getState(data, state, i) {
+      const cases = data.stateCases[state][i];
+      const lastWeek = i - 7 < 0 ? 0 : data.stateCases[state][i - 7];
+      return Math.max(cases - lastWeek, 0);
+    },
+    format(num) {
+      return num.toLocaleString();
+    }
+  },
+  {
+    key: 'newDeathsWeek',
+    description: 'New deaths per week',
+    handlePlural(count) {
+      return count == 1 ? 'new death in a week' : 'new deaths in a week';
+    },
+    getTotal(data, i = null) {
+      if (i == null) i = data.caseIndex;
+      const lastWeek = i - 7 < 0 ? 0 : data.totalDeaths[i - 7];
+      return Math.max(data.totalDeaths[i] - lastWeek, 0);
+    },
+    max(data) {
+      return Math.max(...data.totalDeaths.map((cases, i) => {
+        const lastWeek = i - 7 < 0 ? 0 : data.totalDeaths[i - 7];
+        return Math.max(cases - lastWeek, 0);
+      }))
+    },
+    getCounty(_, county, i) {
+      const lastWeek = i - 7 < 0 ? 0 : county.deaths[i - 7];
+      return Math.max(county.deaths[i] - lastWeek, 0);
+    },
+    getState(data, state, i) {
+      const cases = data.stateDeaths[state][i];
+      const lastWeek = i - 7 < 0 ? 0 : data.stateDeaths[state][i - 7];
+      return Math.max(cases - lastWeek, 0);
+    },
+    format(num) {
+      return num.toLocaleString();
+    }
+  },
+  {
+    key: 'newCasesPer100k',
+    description: 'New cases per day per 100,000',
+    handlePlural(count) {
+      return Math.round(count) == 1 ? 'new case per 100,000' : 'new cases per 100,000';
+    },
+    getTotal(data, i = null) {
+      if (i == null) i = data.caseIndex;
+      const yesterday = i - 1 < 0 ? 0 : data.totalCases[i - 1];
+      return Math.max(data.totalCases[i] - yesterday, 0) / data.totalPopulation * 100000;
+    },
+    max() {
+      return 20000;
+    },
+    getCounty(_, county, i) {
+      const yesterday = i - 1 < 0 ? 0 : county.cases[i - 1];
+      return Math.max(county.cases[i] - yesterday, 0) / county.stats.population * 100000;
+    },
+    getState(data, state, i) {
+      const cases = data.stateCases[state][i];
+      const yesterday = i - 1 < 0 ? 0 : data.stateCases[state][i - 1];
+      return Math.max(cases - yesterday, 0) / data.statesByName[state].stats.population * 100000;
+    },
+    format(num) {
+      return Math.round(num).toLocaleString();
+    }
+  },
+  {
+    key: 'newDeathsPer100k',
+    description: 'New deaths per day per 100,000',
+    handlePlural(count) {
+      return Math.round(count) == 1 ? 'new death per 100,000' : 'new deaths per 100,000';
+    },
+    getTotal(data, i = null) {
+      if (i == null) i = data.caseIndex;
+      const yesterday = i - 1 < 0 ? 0 : data.totalDeaths[i - 1];
+      return Math.max(data.totalDeaths[i] - yesterday, 0) / data.totalPopulation * 100000;
+    },
+    max() {
+      return 5000;
+    },
+    getCounty(_, county, i) {
+      const yesterday = i - 1 < 0 ? 0 : county.deaths[i - 1];
+      return Math.max(county.deaths[i] - yesterday, 0) / county.stats.population * 100000;
+    },
+    getState(data, state, i) {
+      const deaths = data.stateDeaths[state][i];
+      const yesterday = i - 1 < 0 ? 0 : data.stateDeaths[state][i - 1];
+      return Math.max(deaths - yesterday, 0) / data.statesByName[state].stats.population * 100000;
+    },
+    format(num) {
+      return Math.round(num).toLocaleString();
+    }
+  },
+  {
+    key: 'newCasesPer100kWeek',
+    description: 'New cases per day per 100,000 per week',
+    handlePlural(count) {
+      return Math.round(count) == 1 ? 'new case per 100,000 in a week' : 'new cases per 100,000 in a week';
+    },
+    getTotal(data, i = null) {
+      if (i == null) i = data.caseIndex;
+      const lastWeek = i - 7 < 0 ? 0 : data.totalCases[i - 7];
+      return Math.max(data.totalCases[i] - lastWeek, 0) / data.totalPopulation * 100000;
+    },
+    max() {
+      return 80000;
+    },
+    getCounty(_, county, i) {
+      const lastWeek = i - 7 < 0 ? 0 : county.cases[i - 7];
+      return Math.max(county.cases[i] - lastWeek, 0) / county.stats.population * 100000;
+    },
+    getState(data, state, i) {
+      const cases = data.stateCases[state][i];
+      const lastWeek = i - 7 < 0 ? 0 : data.stateCases[state][i - 7];
+      return Math.max(cases - lastWeek, 0) / data.statesByName[state].stats.population * 100000;
+    },
+    format(num) {
+      return Math.round(num).toLocaleString();
+    }
+  },
+  {
+    key: 'newDeathsPer100kWeek',
+    description: 'New deaths per day per 100,000 per week',
+    handlePlural(count) {
+      return Math.round(count) == 1 ? 'new death per 100,000 in a week' : 'new deaths per 100,000 in a week';
+    },
+    getTotal(data, i = null) {
+      if (i == null) i = data.caseIndex;
+      const lastWeek = i - 7 < 0 ? 0 : data.totalDeaths[i - 7];
+      return Math.max(data.totalDeaths[i] - lastWeek, 0) / data.totalPopulation * 100000;
+    },
+    max() {
+      return 5000;
+    },
+    getCounty(_, county, i) {
+      const lastWeek = i - 7 < 0 ? 0 : county.deaths[i - 7];
+      return Math.max(county.deaths[i] - lastWeek, 0) / county.stats.population * 100000;
+    },
+    getState(data, state, i) {
+      const deaths = data.stateDeaths[state][i];
+      const lastWeek = i - 7 < 0 ? 0 : data.stateDeaths[state][i - 7];
+      return Math.max(deaths - lastWeek, 0) / data.statesByName[state].stats.population * 100000;
+    },
+    format(num) {
+      return Math.round(num).toLocaleString();
+    }
+  },
+  {
     key: 'deathrate',
     description: 'Rate of deaths relative to number of cases',
     handlePlural() {
@@ -214,6 +382,7 @@ export class Data extends Svue {
           countyMinPopFilter: -1,
           countyMaxPopFilter: 1000000000,
           countyMinCasesFilter: -1,
+          countyMaxCasesFilter: 1000000000,
           zoom: 0
         };
       },
@@ -225,8 +394,8 @@ export class Data extends Svue {
         },
       },
       computed: {
-        countyFilter(countyMinPopFilter, countyMaxPopFilter, countyMinCasesFilter) {
-          return (county, i) => county.stats.population >= countyMinPopFilter && county.stats.population <= countyMaxPopFilter && county.cases[i] >= countyMinCasesFilter
+        countyFilter(countyMinPopFilter, countyMaxPopFilter, countyMinCasesFilter, countyMaxCasesFilter) {
+          return (county, i) => county.stats.population >= countyMinPopFilter && county.stats.population <= countyMaxPopFilter && county.cases[i] >= countyMinCasesFilter && county.cases[i] <= countyMaxCasesFilter
         },
         metrics(activeMetrics) {
           return activeMetrics.map(x => metrics[x]);

@@ -127,7 +127,7 @@
           type="radio"
           bind:group={$data.countyMinPopFilter}
           value={100000} />
-        Only show counties with population over 100,000
+        Only show counties with population of at least 100,000
       </label>
     </div>
 
@@ -137,7 +137,7 @@
           type="radio"
           bind:group={$data.countyMinPopFilter}
           value={200000} />
-        Only show counties with population over 200,000
+        Only show counties with population of at least 200,000
       </label>
     </div>
     <div class="option">
@@ -146,7 +146,7 @@
           type="radio"
           bind:group={$data.countyMinPopFilter}
           value={500000} />
-        Only show counties with population over 500,000
+        Only show counties with population of at least 500,000
       </label>
     </div>
     <div class="option">
@@ -155,7 +155,7 @@
           type="radio"
           bind:group={$data.countyMinPopFilter}
           value={1000000} />
-        Only show counties with population over 1,000,000
+        Only show counties with population of at least 1,000,000
       </label>
     </div>
   </div>
@@ -261,6 +261,59 @@
           bind:group={$data.countyMinCasesFilter}
           value={2000} />
         Only show counties with at least 2,000 cases
+      </label>
+    </div>
+  </div>
+
+  <div class="filter">
+    <p>
+      <b>Show counties with at most the specified cases</b>
+    </p>
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMaxCasesFilter}
+          value={1000000000} />
+        Show all counties
+      </label>
+    </div>
+
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMaxCasesFilter}
+          value={100} />
+        Only show counties with at most 100 cases
+      </label>
+    </div>
+
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMaxCasesFilter}
+          value={500} />
+        Only show counties with at most 500 cases
+      </label>
+    </div>
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMaxCasesFilter}
+          value={1000} />
+        Only show counties with at most 1,000 cases
+      </label>
+    </div>
+    <div class="option">
+      <label>
+        <input
+          type="radio"
+          bind:group={$data.countyMaxCasesFilter}
+          value={2000} />
+        Only show counties with at most 2,000 cases
       </label>
     </div>
   </div>

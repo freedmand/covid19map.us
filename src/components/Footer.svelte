@@ -1,4 +1,6 @@
 <script>
+  import { show } from "@/show";
+
   export let data;
 </script>
 
@@ -19,8 +21,17 @@
       margin: 0 10px;
     }
 
-    a {
+    a,
+    .settings {
       text-decoration: underline;
+    }
+
+    .settings {
+      cursor: pointer;
+
+      @include on-hover {
+        opacity: 0.8;
+      }
     }
   }
 </style>
@@ -29,6 +40,9 @@
   {#if data != null}
     <div>
       Updated {data.lastUpdated}.
+      <span class="settings" on:click={() => (show.showSettings = true)}>
+        Settings.
+      </span>
       <a href="https://github.com/freedmand/covid19map" target="_blank">
         Source Code.
       </a>
