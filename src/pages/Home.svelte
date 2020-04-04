@@ -301,9 +301,17 @@
   on:resize={() => (panned = true)}
   on:keydown={e => {
     if (data == null) return;
+    let multiplier = 1;
+    if (e.shiftKey) {
+      if (e.altKey) {
+        multiplier = 30;
+      } else {
+        multiplier = 7;
+      }
+    }
     if (e.code == 'ArrowLeft') {
-      data.caseIndex = Math.max(data.caseIndex - 1, 0);
+      data.caseIndex = Math.max(data.caseIndex - 1 * multiplier, 0);
     } else if (e.code == 'ArrowRight') {
-      data.caseIndex = Math.min(data.caseIndex + 1, data.numDays - 1);
+      data.caseIndex = Math.min(data.caseIndex + 1 * multiplier, data.numDays - 1);
     }
   }} />
