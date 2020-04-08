@@ -1,7 +1,7 @@
 import { Svue } from "svue";
 
 // Deck.gl
-import { ScatterplotLayer, PolygonLayer } from "@deck.gl/layers";
+import { ScatterplotLayer, PolygonLayer, ColumnLayer } from "@deck.gl/layers";
 import TagmapLayer from "@/thirdparty/tagmap-layer";
 
 const TRANSITION = {
@@ -363,7 +363,7 @@ export const allMetrics = [
 export const metrics = Object.assign({}, ...allMetrics.map(item => ({ [item.key]: item })));
 
 export class Data extends Svue {
-  constructor(data) {
+  constructor(data, options = {}) {
     super({
       data() {
         return {
@@ -373,6 +373,7 @@ export class Data extends Svue {
           activeMetrics: ['cases', 'deaths'],
           caseIndex: data.numDays - 1,
           circleScale: 4000,
+          threeD: options['3d'] || false,
           retainCircleSize: true,
           showTextLabels: true,
           initialZoom: 0,
@@ -603,6 +604,31 @@ export class Data extends Svue {
             pickable: true
           });
         },
+        cylinderLayer(countyCircles) {
+          return new ColumnLayer({
+            id: "county-cylinders",
+            data: countyCircles,
+            diskResolution: 12,
+            radius: 250,
+            elevationScale: -500,
+            // radiusScale: effectiveCircleScale / 100,
+            extruded: true,
+            getFillColor: d => [255, 0, 0, d.radius < 0.01 ? 0 : 235],
+            getLineColor: [255, 0, 0, 204],
+            lineWidthMinPixels: 0.5,
+            lineWidthMaxPixels: 0.5,
+            getElevation: d => (d.radius < 0.01 ? 0 : d.radius),
+            parameters: {
+              depthTest: false
+            },
+            transitions: {
+              getRadius: TRANSITION
+            },
+
+            // Events
+            pickable: true
+          });
+        },
         textLayer(textData, showTextLabels) {
           return new TagmapLayer({
             id: "text-layer",
@@ -620,13 +646,15 @@ export class Data extends Svue {
           countyLayer,
           stateLayer,
           circleLayer,
-          textLayer
+          cylinderLayer,
+          textLayer,
+          threeD,
         ) {
           return [
             stateBgLayer,
             countyLayer,
             stateLayer,
-            circleLayer,
+            threeD ? cylinderLayer : circleLayer,
             textLayer
           ];
         }
