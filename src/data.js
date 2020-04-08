@@ -613,7 +613,7 @@ export class Data extends Svue {
             elevationScale: -500,
             // radiusScale: effectiveCircleScale / 100,
             extruded: true,
-            getFillColor: d => [255, 0, 0, d.radius < 0.01 ? 0 : 235],
+            getFillColor: d => [255, 0, 0, d.radius < 0.01 ? 0 : 35],
             getLineColor: [255, 0, 0, 204],
             lineWidthMinPixels: 0.5,
             lineWidthMaxPixels: 0.5,
