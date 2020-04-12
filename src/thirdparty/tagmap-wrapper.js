@@ -2,7 +2,7 @@
 /* eslint-disable max-len */
 /* global document */
 import TagMap from 'tagmap.js';
-import rbush from 'tagmap.js/node_modules/rbush/index';
+import rbush from 'rbush';
 
 function getDrawingContext() {
   const canvas = document.createElement('canvas');

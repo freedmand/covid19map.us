@@ -41,6 +41,7 @@
   "dependencies": {
     "d3-scale": "^3.2.1",
     "deck.gl": "^8.1.0",
+    "rbush": "^2.0.1",
     "svue": "^1.5.3",
     "tagmap.js": "^1.1.1",
     "tinyqueue": "^2.0.3"
