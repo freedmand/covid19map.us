@@ -3,7 +3,6 @@ import math
 import collections
 import json
 import struct
-from datetime import datetime
 import os
 import pytz
 from pytz import timezone
@@ -295,14 +294,8 @@ def process(working_dir=""):
     for x in fips_map.values():
         states[x["state"]].append(x)
 
-    # Get last updated time
-    def floor_dt(dt, interval):
-        # Courtesy of https://stackoverflow.com/a/56387775
-        replace = (dt.minute // interval) * interval
-        return dt.replace(minute=replace, second=0, microsecond=0)
-
-    dt = floor_dt(datetime.now(tz=pytz.utc), 30).astimezone(timezone("US/Eastern"))
-    last_updated = dt.strftime("%b %d, %Y at %I:%M %p %Z").replace(" 0", " ")
+    with open(os.path.join(working_dir, "last_updated.txt"), "r") as f:
+        last_updated = f.read().strip()
     print("Last Updated (rounded to nearest 30 mins)", last_updated)
 
     def expand_runs(data):

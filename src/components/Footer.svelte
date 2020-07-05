@@ -47,10 +47,8 @@
         Source Code.
       </a>
       Data by
-      <a
-        href="https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/"
-        target="_blank">
-        USAFacts.
+      <a href="https://github.com/nytimes/covid-19-data" target="_blank">
+        The New York Times.
       </a>
 
     </div>
