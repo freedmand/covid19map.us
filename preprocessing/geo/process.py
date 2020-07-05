@@ -5,9 +5,9 @@ topojson_to_geojson("states.topo.json", "states.geo.json")
 topojson_to_geojson("counties.topo.json", "counties.geo.json")
 
 os.system(
-    "node_modules/d3-geo-projection/bin/geoproject 'd3.geoAlbersUsa()' counties.geo.json > counties.json"
+    "cat counties-processed.geo.json | node_modules/d3-geo-projection/bin/geoproject -r projection=./geoAlbersUsaPr.js -n 'projection().scale(1300).translate([487.5, 305])' > counties.json"
 )
 
 os.system(
-    "node_modules/d3-geo-projection/bin/geoproject 'd3.geoAlbersUsa()' states.geo.json > states.json"
+    "cat states.geo.json | node_modules/d3-geo-projection/bin/geoproject -r projection=./geoAlbersUsaPr.js -n 'projection().scale(1300).translate([487.5, 305])' > states.json"
 )

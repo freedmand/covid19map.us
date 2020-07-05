@@ -6,6 +6,7 @@
   import SettingsPane from "@/components/SettingsPane";
   import Modal from "@/components/Modal";
   import Sparkline from "@/components/Sparkline";
+  import { onMount, onDestroy } from "svelte";
 
   import { show, resetShow } from "@/show";
 
@@ -43,6 +44,16 @@
 
     playTimer = setTimeout(autoIncrement, PLAY_INTERVAL);
   }
+
+  let showObj = {};
+  let showUnsubscribe = null;
+  onMount(() => {
+    showUnsubscribe = show.subscribe(() => (showObj = show));
+  });
+
+  onDestroy(() => {
+    if (showUnsubscribe != null) showUnsubscribe();
+  });
 </script>
 
 <style lang="scss">
@@ -144,15 +155,15 @@
 
 {#if data != null && showSearchPane}
   <SearchPane {data} on:dismiss={() => (showSearchPane = false)} />
-{:else if data != null && show.showMetrics}
+{:else if data != null && showObj.showMetrics}
   <MetricsPane {data} on:dismiss={() => (show.showMetrics = false)} />
-{:else if data != null && $show.showAll}
+{:else if data != null && showObj.showAll}
   <DatePane {data} on:dismiss={resetShow} />
-{:else if data != null && $show.showCounty}
-  <DatePane {data} county={$show.county} on:dismiss={resetShow} />
-{:else if data != null && $show.showState}
-  <DatePane {data} state={$show.state} on:dismiss={resetShow} />
-{:else if data != null && $show.showSettings}
+{:else if data != null && showObj.showCounty}
+  <DatePane {data} county={showObj.county} on:dismiss={resetShow} />
+{:else if data != null && showObj.showState}
+  <DatePane {data} state={showObj.state} on:dismiss={resetShow} />
+{:else if data != null && showObj.showSettings}
   <SettingsPane {data} on:dismiss={() => (show.showSettings = false)} />
 {:else}
   <header>

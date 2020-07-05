@@ -255,8 +255,8 @@
     {tooltipPinBottom ? `bottom: ${windowHeight - tooltip.y}px;` : `top: ${tooltip.y}px;`}"
     class:hide={hideTooltip}
     class:immediatehide={tooltip.x == -1 && tooltip.y == -1}>
-    {#if tooltip.object != null && tooltip.object.county != null}
-      {#if $data.getCounty(tooltip.object.county, $data.caseIndex) != 0}
+    {#if tooltip.object != null}
+      {#if tooltip.object.county != null && $data.getCounty(tooltip.object.county, $data.caseIndex) != 0}
         <div class="block">
           <div class="type">County</div>
           <div>{tooltip.object.county.name}</div>
@@ -278,18 +278,20 @@
 
       <div class="block">
         <div class="type">State</div>
-        <div>{tooltip.object.county.state}</div>
+        <div>
+          {tooltip.object.county == null ? tooltip.object.state.name : tooltip.object.county.state}
+        </div>
         <Sparkline
           data={$data}
           metric={$data.metric}
-          state={tooltip.object.county.state}
+          state={tooltip.object.county == null ? tooltip.object.state.name : tooltip.object.county.state}
           includeFill={false} />
         {#each $data.metrics as metric}
           <div class="toolstat" class:inactive={!$data.isActive(metric)}>
             <b>
-              {metric.format(metric.getState($data, tooltip.object.county.state, $data.caseIndex))}
+              {metric.format(metric.getState($data, tooltip.object.county == null ? tooltip.object.state.name : tooltip.object.county.state, $data.caseIndex))}
             </b>
-            {metric.handlePlural(metric.getState($data, tooltip.object.county.state, $data.caseIndex))}
+            {metric.handlePlural(metric.getState($data, tooltip.object.county == null ? tooltip.object.state.name : tooltip.object.county.state, $data.caseIndex))}
           </div>
         {/each}
       </div>
