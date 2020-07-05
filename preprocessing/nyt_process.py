@@ -3,11 +3,13 @@
 import csv
 import collections
 import json
+import os
 from datetime import date
 
-    def nyt_process():
-    historical_fn = "historical.csv"
-    live_fn = "live.csv"
+
+def nyt_process(working_dir=""):
+    historical_fn = os.path.join(working_dir, "historical.csv")
+    live_fn = os.path.join(working_dir, "live.csv")
 
     counts = collections.defaultdict(collections.Counter)
     places = collections.OrderedDict()
@@ -75,8 +77,9 @@ from datetime import date
         if data[-1]["state"] == "Puerto Rico" and data[-1]["deaths"][-1] == 0:
             data[-1]["deaths"][-1] = data[-1]["deaths"][-2]
 
-    with open("nyt_data.json", "w") as f:
+    with open(os.path.join(working_dir, "nyt_data.json"), "w") as f:
         json.dump(data, f)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     nyt_process()
