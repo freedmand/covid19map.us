@@ -71,6 +71,14 @@
     </div>
     <div>
       <label>
+        Only color counties with more new cases/deaths
+        <br />
+        on a given day compared to the previous day
+        <input type="checkbox" bind:checked={data.increaseMode} />
+      </label>
+    </div>
+    <div>
+      <label>
         Circle scaling
         <input
           type="range"

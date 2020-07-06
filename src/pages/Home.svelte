@@ -316,4 +316,7 @@
     } else if (e.code == 'ArrowRight') {
       data.caseIndex = Math.min(data.caseIndex + 1 * multiplier, data.numDays - 1);
     }
+    if (e.code == 'KeyC') {
+      data.increaseMode = !data.increaseMode;
+    }
   }} />

@@ -372,6 +372,7 @@ export class Data extends Svue {
           activeMetric: "cases",
           activeMetrics: ['cases', 'deaths'],
           caseIndex: data.numDays - 1,
+          numDays: data.numDays,
           circleScale: 4000,
           threeD: options['3d'] || false,
           retainCircleSize: true,
@@ -384,7 +385,8 @@ export class Data extends Svue {
           countyMaxPopFilter: 1000000000,
           countyMinCasesFilter: -1,
           countyMaxCasesFilter: 1000000000,
-          zoom: 0
+          zoom: 0,
+          increaseMode: false
         };
       },
       watch: {
@@ -403,6 +405,9 @@ export class Data extends Svue {
         },
         metric(activeMetric) {
           return metrics[activeMetric];
+        },
+        adjustedCaseIndex(caseIndex, numDays) {
+          return caseIndex == numDays - 1 ? caseIndex - 1 : caseIndex;
         },
         zoomScale(initialZoom, zoom) {
           const initial = Math.pow(2, initialZoom);
@@ -443,7 +448,7 @@ export class Data extends Svue {
         polygonCounties(counties) {
           return counties.filter(county => county.polygon.centroid != null);
         },
-        countyRegions(polygonCounties, metric, countyFilter, caseIndex) {
+        countyRegions(polygonCounties, metric, countyFilter, caseIndex, adjustedCaseIndex, increaseMode) {
           return polygonCounties
             .map(county =>
               county.polygon.centroid.multipoly.map(poly => ({
@@ -452,12 +457,13 @@ export class Data extends Svue {
                 value:
                   // Apply filters
                   countyFilter(county, caseIndex) ?
-                    metric.getCounty(this, county, caseIndex) : 0
+                    metric.getCounty(this, county, caseIndex) : 0,
+                increase: !increaseMode || caseIndex < 2 || !countyFilter(county, caseIndex) ? false : metric.getCounty(this, county, adjustedCaseIndex - 1) - metric.getCounty(this, county, adjustedCaseIndex - 2) < metric.getCounty(this, county, adjustedCaseIndex) - metric.getCounty(this, county, adjustedCaseIndex - 1)
               }))
             )
             .flat(1);
         },
-        countyCircles(polygonCounties, caseIndex, normalizeCircles, countyFilter, metric) {
+        countyCircles(polygonCounties, caseIndex, normalizeCircles, countyFilter, metric, adjustedCaseIndex, increaseMode) {
           return polygonCounties.map(county => ({
             position: [county.polygon.centroid.x, county.polygon.centroid.y],
             radius:
@@ -466,7 +472,8 @@ export class Data extends Svue {
                 Math.sqrt(
                   metric.getCounty(this, county, caseIndex) / (normalizeCircles ? metric.max(this) : 1)
                 ) * (normalizeCircles ? MAX_WEIGHT : 1) : 0,
-            county
+            county,
+            increase: !increaseMode || caseIndex < 2 ? false : metric.getCounty(this, county, adjustedCaseIndex - 1) - metric.getCounty(this, county, adjustedCaseIndex - 2) < metric.getCounty(this, county, adjustedCaseIndex) - metric.getCounty(this, county, adjustedCaseIndex - 1)
           }));
         },
         polygonStates(states) {
@@ -525,7 +532,7 @@ export class Data extends Svue {
             pickable: true
           });
         },
-        countyLayer(countyRegions, normalizeCircles, metric, showCounties) {
+        countyLayer(countyRegions, normalizeCircles, metric, showCounties, increaseMode) {
           return new PolygonLayer({
             id: "county-regions",
             data: countyRegions,
@@ -547,7 +554,7 @@ export class Data extends Svue {
                 0.08
               );
               shade = 255 - shade * 255;
-              return [255, shade, shade];
+              return [increaseMode && !d.increase ? shade : 255, shade, shade];
             },
             opacity: showCounties ? 1 : 0,
             lineWidthMinPixels: 0.5,
@@ -582,14 +589,14 @@ export class Data extends Svue {
             }
           });
         },
-        circleLayer(countyCircles, effectiveCircleScale) {
+        circleLayer(countyCircles, effectiveCircleScale, increaseMode) {
           return new ScatterplotLayer({
             id: "county-circles",
             data: countyCircles,
             radiusScale: effectiveCircleScale / 100,
             stroked: true,
-            getFillColor: [255, 0, 0, 35],
-            getLineColor: [255, 0, 0, 204],
+            getFillColor: d => [increaseMode && !d.increase ? 0 : 255, 0, 0, 35],
+            getLineColor: d => [increaseMode && !d.increase ? 0 : 255, 0, 0, 204],
             lineWidthMinPixels: 0.5,
             lineWidthMaxPixels: 0.5,
             getRadius: d => (d.radius < 0.01 ? 0 : d.radius),
