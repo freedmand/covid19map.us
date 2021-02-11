@@ -22,6 +22,10 @@ def nyt_process(working_dir=""):
         next(reader)
         for row in reader:
             timestamp, county, state, fips, cases, deaths = row
+            if cases.strip() == "":
+                cases = "0"
+            if deaths.strip() == "":
+                deaths = "0"
             cases, deaths = int(cases), int(deaths)
             day_offset = (date(*map(int, timestamp.split("-"))) - start_date).days
             if day_offset > max_day:

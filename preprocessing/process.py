@@ -19,6 +19,9 @@ def process(working_dir=""):
     NYC = "36NYC"
     # Special key for Puerto Rico
     PR = "72PR"
+    # Alaska FIPS merges
+    BRISTOL_BAY_LAKE_PENINSULA = "02997"  # 02060 and 02164
+    YAKUTAT_CITY_HOONAH_ANGOON = "02998"  # 02282 and 02105
 
     fips_for_state = {
         "Alabama": "01",
@@ -234,6 +237,12 @@ def process(working_dir=""):
             + populations["36085"]
             + populations["36005"]
             + populations["36061"]
+        )
+        populations[BRISTOL_BAY_LAKE_PENINSULA] = (
+            populations["02060"] + populations["02164"]
+        )
+        populations[YAKUTAT_CITY_HOONAH_ANGOON] = (
+            populations["02282"] + populations["02105"]
         )
 
     bounds = get_bounds(["geo/states.json", "geo/counties.json"])
