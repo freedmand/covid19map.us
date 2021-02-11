@@ -69,7 +69,7 @@ export const allMetrics = [
       return data.totalCases[i] / data.totalPopulation * 100000;
     },
     max() {
-      return 100000;
+      return 5000000;
     },
     getCounty(_, county, i) {
       return county.cases[i] / county.stats.population * 100000;
@@ -93,7 +93,7 @@ export const allMetrics = [
       return data.totalDeaths[i] / data.totalPopulation * 100000;
     },
     max() {
-      return 2000;
+      return 100000;
     },
     getCounty(_, county, i) {
       return county.deaths[i] / county.stats.population * 100000;
